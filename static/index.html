@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checklane — SEO for AI shopping agents</title>
+<meta name="description" content="Checklane measures how ready your store is for AI shopping agents — and shows you exactly how to fix it. Free agent-readiness audit.">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="#top"><span class="brand-mark">▦</span> Checklane</a>
+    <nav class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="#sample">Sample report</a>
+      <a href="#checks">What we check</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <a class="btn btn-small" href="#audit">Free audit</a>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============ HERO + LIVE AUDIT WIDGET ============ -->
+  <section class="hero" id="audit">
+    <div class="wrap">
+      <p class="kicker">Agent-readiness for small business</p>
+      <h1>SEO for AI shopping agents.</h1>
+      <p class="lede">AI agents are starting to shop for your customers. Checklane measures
+        how ready your store is — and shows you exactly how to fix it.</p>
+
+      <form id="audit-form" class="audit-form" autocomplete="off">
+        <input id="audit-domain" type="text" inputmode="url"
+               placeholder="yourstore.com" aria-label="Your store domain">
+        <button type="submit" class="btn btn-large">Run free audit</button>
+      </form>
+      <p class="micro">Free. Reads only your site&rsquo;s public pages. No account needed.
+        Takes about 30&ndash;60 seconds.</p>
+
+      <div id="audit-status" class="audit-status" hidden></div>
+      <div id="audit-result" class="audit-result" hidden></div>
+    </div>
+  </section>
+
+  <!-- ============ ATTESTATION STRIP ============ -->
+  <section class="strip">
+    <div class="wrap">
+      <p><strong>Our language is deliberate.</strong> Checklane <em>attests</em> to what it can
+        verify about your store. We never guarantee sales, rankings, or how any agent behaves.
+        A good score means agents <em>can</em> read and transact with you — not that they will.</p>
+    </div>
+  </section>
+
+  <!-- ============ HOW IT WORKS ============ -->
+  <section class="section" id="how">
+    <div class="wrap">
+      <h2>How it works</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-n">1</div>
+          <h3>Run the audit</h3>
+          <p>Enter your domain. We score your store 0&ndash;100 across five agent-readiness
+            categories, in about a minute.</p>
+        </div>
+        <div class="step">
+          <div class="step-n">2</div>
+          <h3>Get the fix list</h3>
+          <p>Every failing check comes with a concrete fix, ranked by severity. Most are
+            an afternoon&rsquo;s work.</p>
+        </div>
+        <div class="step">
+          <div class="step-n">3</div>
+          <h3>Prove it monthly</h3>
+          <p>Founding merchants get the agent console — weekly visibility checks plus
+            detected agent traffic on your store — and the Checklane authentication badge.
+            <strong>$29/mo, cancel anytime.</strong></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SAMPLE REPORT ============ -->
+  <section class="section section-alt" id="sample">
+    <div class="wrap">
+      <h2>What a report looks like</h2>
+      <p class="section-sub">Anonymized sample from a real small-business audit. Run your own
+        above to see your store&rsquo;s version.</p>
+      <div id="sample-report" class="report-card"><p class="loading">Loading sample report&hellip;</p></div>
+    </div>
+  </section>
+
+  <!-- ============ WHAT WE CHECK ============ -->
+  <section class="section" id="checks">
+    <div class="wrap">
+      <h2>What the audit checks</h2>
+      <div class="checks">
+        <div class="check">
+          <h3>UCP capability profile</h3>
+          <p>Whether your store publishes a machine-readable profile under the open
+            Universal Commerce Protocol — the file agents read to discover that you accept
+            agent transactions.</p>
+        </div>
+        <div class="check">
+          <h3>Structured product data</h3>
+          <p>schema.org Product markup: names, images, prices, availability, identifiers.
+            Agents parse structured data first; pages without it are effectively invisible.</p>
+        </div>
+        <div class="check">
+          <h3>Feed discoverability</h3>
+          <p>Sitemaps and machine-readable product feeds. If agents can&rsquo;t enumerate
+            your catalog, they can&rsquo;t sell it.</p>
+        </div>
+        <div class="check">
+          <h3>Agent access</h3>
+          <p>We request your homepage as six known AI-agent user agents. If your bot
+            defenses block them, agents can&rsquo;t see your products at all.</p>
+        </div>
+        <div class="check">
+          <h3>Machine-readability</h3>
+          <p>robots.txt posture toward AI crawlers, server-rendered content, and HTML
+            fundamentals. Agents read HTML, not your JavaScript bundle.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FAQ ============ -->
+  <section class="section section-alt" id="faq">
+    <div class="wrap">
+      <h2>Questions</h2>
+      <div class="faq">
+        <details>
+          <summary>Is this a certification or a guarantee?</summary>
+          <p>No. The audit is a readiness <em>assessment</em>: it attests to verifiable,
+            machine-readable facts about your store. It does not certify your business,
+            guarantee sales, or promise that any agent will recommend you.</p>
+        </details>
+        <details>
+          <summary>Do you need access to my store?</summary>
+          <p>No. The audit reads only your site&rsquo;s public pages — the same pages any
+            visitor or agent would see. Nothing is installed, and no login is required.</p>
+        </details>
+        <details>
+          <summary>Will this make ChatGPT recommend my products?</summary>
+          <p>Nobody controls what agents recommend. What we measure is whether agents
+            <em>can</em> discover, read, and transact with your store. Readiness is
+            necessary; it isn&rsquo;t sufficient — and we&rsquo;ll always say so.</p>
+        </details>
+        <details>
+          <summary>What does the $29/mo founding beta include?</summary>
+          <p>The agent console: weekly checks of whether your products surface in AI
+            shopping answers, plus detected agent traffic on your own store — the proof
+            that agents are finding you. And the Checklane authentication badge: an
+            earned, verifiable identity credential for your storefront. Cancel anytime.</p>
+        </details>
+        <details>
+          <summary>Who is Checklane?</summary>
+          <p>We&rsquo;re a small team building the trust layer for agentic commerce —
+            starting with the merchants the big platforms overlook. This audit is our
+            first product.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <p><span class="brand-mark">▦</span> Checklane — agent-readiness for small business.</p>
+    <p class="micro">Checklane provides readiness assessments, not guarantees. Scores attest
+      to verifiable technical facts about a storefront at the time of the audit.</p>
+  </div>
+</footer>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
