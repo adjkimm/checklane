@@ -1,0 +1,210 @@
+{
+  "domain": "samplestore.example",
+  "score": 78,
+  "grade": "B",
+  "summary": "Mostly ready. A few gaps keep some agents from fully reading or transacting with your store \u2014 the fix list below closes them.",
+  "categories": [
+    {
+      "name": "UCP capability profile",
+      "score": 20,
+      "max": 20,
+      "checks": [
+        {
+          "id": "ucp-valid",
+          "name": "UCP capability profile found and valid",
+          "status": "pass",
+          "detail": "Published at https://sample-store.myshopify.com/.well-known/ucp/2026-04-08; capability areas: cart, checkout, discovery, identity, order.",
+          "fix": null,
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "name": "Structured product data",
+      "score": 0,
+      "max": 20,
+      "checks": [
+        {
+          "id": "jsonld-present",
+          "name": "JSON-LD structured data present",
+          "status": "fail",
+          "detail": "No application/ld+json blocks in homepage HTML.",
+          "fix": "Add JSON-LD structured data (schema.org) to your pages. Agents parse structured data first; pages without it are effectively invisible to them.",
+          "severity": "high"
+        },
+        {
+          "id": "product-markup",
+          "name": "schema.org Product markup",
+          "status": "fail",
+          "detail": "No Product-typed JSON-LD on the homepage or a sampled product page.",
+          "fix": "Add schema.org Product markup with name, image, offers (price, currency, availability), brand and identifiers to product pages. This is the single highest-leverage agent-readiness fix for most stores.",
+          "severity": "high"
+        },
+        {
+          "id": "org-markup",
+          "name": "Organization identity markup",
+          "status": "partial",
+          "detail": "No Organization JSON-LD found.",
+          "fix": "Add an Organization node (name, url, logo, sameAs links). It is the cheapest identity signal an agent can verify.",
+          "severity": "low"
+        }
+      ]
+    },
+    {
+      "name": "Product feed discoverability",
+      "score": 20,
+      "max": 20,
+      "checks": [
+        {
+          "id": "sitemap",
+          "name": "XML sitemap present and parseable",
+          "status": "pass",
+          "detail": "701 URL(s) listed (via sitemap index); ~700 product pages.",
+          "fix": null,
+          "severity": "medium"
+        },
+        {
+          "id": "product-feed",
+          "name": "Machine-readable product feed",
+          "status": "pass",
+          "detail": "Found: Shopify /products.json (1 product(s) sampled).",
+          "fix": null,
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "name": "Agent access (bot-wall check)",
+      "score": 20,
+      "max": 20,
+      "checks": [
+        {
+          "id": "agent-ua:GPTBot (OpenAI crawler)",
+          "name": "Access for GPTBot (OpenAI crawler)",
+          "status": "pass",
+          "detail": "HTTP 200, same page as a normal visit.",
+          "fix": null,
+          "severity": "medium"
+        },
+        {
+          "id": "agent-ua:GoogleOther (Google AI crawling)",
+          "name": "Access for GoogleOther (Google AI crawling)",
+          "status": "pass",
+          "detail": "HTTP 200, same page as a normal visit.",
+          "fix": null,
+          "severity": "medium"
+        },
+        {
+          "id": "agent-ua:ClaudeBot (Anthropic)",
+          "name": "Access for ClaudeBot (Anthropic)",
+          "status": "pass",
+          "detail": "HTTP 200, same page as a normal visit.",
+          "fix": null,
+          "severity": "medium"
+        },
+        {
+          "id": "agent-ua:CCBot (Common Crawl)",
+          "name": "Access for CCBot (Common Crawl)",
+          "status": "pass",
+          "detail": "HTTP 200, same page as a normal visit.",
+          "fix": null,
+          "severity": "medium"
+        },
+        {
+          "id": "agent-ua:PerplexityBot",
+          "name": "Access for PerplexityBot",
+          "status": "pass",
+          "detail": "HTTP 200, same page as a normal visit.",
+          "fix": null,
+          "severity": "medium"
+        },
+        {
+          "id": "agent-ua:ChatGPT-User (on-demand agent fetch)",
+          "name": "Access for ChatGPT-User (on-demand agent fetch)",
+          "status": "pass",
+          "detail": "HTTP 200, same page as a normal visit.",
+          "fix": null,
+          "severity": "medium"
+        },
+        {
+          "id": "agent-access-summary",
+          "name": "Overall agent accessibility",
+          "status": "pass",
+          "detail": "All 6 tested agent user agents can read the homepage.",
+          "fix": null,
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "name": "Machine-readability basics",
+      "score": 18,
+      "max": 20,
+      "checks": [
+        {
+          "id": "robots-ai",
+          "name": "robots.txt posture toward AI crawlers",
+          "status": "pass",
+          "detail": "No AI-crawler tokens are disallowed in robots.txt.",
+          "fix": null,
+          "severity": "medium"
+        },
+        {
+          "id": "static-content",
+          "name": "Key content in static HTML",
+          "status": "pass",
+          "detail": "~20340 characters of visible text in raw HTML; content is server-rendered.",
+          "fix": null,
+          "severity": "medium"
+        },
+        {
+          "id": "html-basics",
+          "name": "HTML fundamentals",
+          "status": "partial",
+          "detail": "3 of 4 present; missing: H1 heading.",
+          "fix": "Add the missing fundamentals (H1 heading). They cost minutes and every parser \u2014 search or agent \u2014 relies on them.",
+          "severity": "low"
+        },
+        {
+          "id": "product-links",
+          "name": "Product links in static HTML",
+          "status": "pass",
+          "detail": "22 product-like links found in static HTML \u2014 agents can crawl your catalog.",
+          "fix": null,
+          "severity": "medium"
+        }
+      ]
+    }
+  ],
+  "fixes": [
+    {
+      "check": "JSON-LD structured data present",
+      "severity": "high",
+      "detail": "No application/ld+json blocks in homepage HTML.",
+      "fix": "Add JSON-LD structured data (schema.org) to your pages. Agents parse structured data first; pages without it are effectively invisible to them."
+    },
+    {
+      "check": "schema.org Product markup",
+      "severity": "high",
+      "detail": "No Product-typed JSON-LD on the homepage or a sampled product page.",
+      "fix": "Add schema.org Product markup with name, image, offers (price, currency, availability), brand and identifiers to product pages. This is the single highest-leverage agent-readiness fix for most stores."
+    },
+    {
+      "check": "HTML fundamentals",
+      "severity": "low",
+      "detail": "3 of 4 present; missing: H1 heading.",
+      "fix": "Add the missing fundamentals (H1 heading). They cost minutes and every parser \u2014 search or agent \u2014 relies on them."
+    },
+    {
+      "check": "Organization identity markup",
+      "severity": "low",
+      "detail": "No Organization JSON-LD found.",
+      "fix": "Add an Organization node (name, url, logo, sameAs links). It is the cheapest identity signal an agent can verify."
+    }
+  ],
+  "fetched_at": 1790120024,
+  "duration_s": 17.1,
+  "engine": "checklane-audit/1.0.0-m1",
+  "sample": true,
+  "sample_note": "Anonymized sample from a real small-business audit (specialty coffee retailer, ~500 SKUs)."
+}
