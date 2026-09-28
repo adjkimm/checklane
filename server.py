@@ -91,7 +91,7 @@ def send_notification(subject, body):
     try:
         import urllib.request
         payload = json.dumps({
-            "from": "Checklane <onboarding@resend.dev>",
+            "from": "Checklane <notify@getchecklane.com>",
             "to": [NOTIFY_EMAIL],
             "subject": subject,
             "text": body,
