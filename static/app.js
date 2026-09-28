@@ -56,7 +56,7 @@
 
   function renderFixes(report) {
     if (!report.fixes || !report.fixes.length) {
-      return '<p>No failing checks. Nice work — your store is in strong shape.</p>';
+      return '<p>No misses &mdash; your store is in great shape. Nice work.</p>';
     }
     return "<ul class='fix-preview'>" + report.fixes.map(function (f) {
       return "<li><span class='sev sev-" + f.severity + "'>" + f.severity + "</span>" +
@@ -68,7 +68,7 @@
     opts = opts || {};
     var top3 = (report.fixes || []).slice(0, 3);
     var preview = top3.length
-      ? "<h4>Top fixes</h4><ul class='fix-preview'>" + top3.map(function (f) {
+      ? "<h4>Your top fixes</h4><ul class='fix-preview'>" + top3.map(function (f) {
           return "<li><span class='sev sev-" + f.severity + "'>" + f.severity + "</span>" +
             "<strong>" + esc(f.check) + ".</strong> " + esc(f.fix) + "</li>";
         }).join("") + "</ul>"
@@ -81,9 +81,10 @@
       renderCategories(report);
     if (!opts.full) {
       body += preview;
-      body += '<div class="gate"><h3>Get the full report + fix list</h3>' +
-        "<p>Enter your details and we&rsquo;ll unlock every check and the complete " +
-        "ranked fix list for <strong>" + esc(report.domain) + "</strong>.</p>" +
+      body += '<div class="gate"><h3>Unlock your full report</h3>' +
+        "<p>Drop your details and we&rsquo;ll unlock every check plus your complete " +
+        "fix list for <strong>" + esc(report.domain) + "</strong>, ranked by what " +
+        "matters most.</p>" +
         '<form id="lead-form" autocomplete="on">' +
         '<div><label for="lead-name">Your name</label>' +
         '<input id="lead-name" name="name" type="text" placeholder="Jordan Lee"></div>' +
@@ -91,22 +92,19 @@
         '<input id="lead-business" name="business" type="text" placeholder="Blue Pine Goods"></div>' +
         "<div><label for='lead-email'>Work email</label>" +
         '<input id="lead-email" name="email" type="email" placeholder="you@yourstore.com"></div></div>' +
-        '<div id="freemail-hint" class="freemail-hint" hidden>Heads up: our merchant ' +
-        "counting uses business-domain emails — a Gmail/Yahoo address won&rsquo;t " +
-        "count as a verifiable merchant. Use name@yourstore.com if you have one.</div>" +
+        '<div id="freemail-hint" class="freemail-hint" hidden>Quick heads-up: use your ' +
+        "store email (like you@yourstore.com) &mdash; a Gmail or Yahoo address " +
+        "won&rsquo;t count as a verified store.</div>" +
         '<div class="field-err" id="lead-err"></div>' +
         '<button type="submit" class="btn">Unlock full report</button></form></div>';
     } else {
-      body += "<h4>Ranked fix list</h4>" + renderFixes(report);
+      body += "<h4>Your fix list</h4>" + renderFixes(report);
       body += '<div class="beta-box"><h3>Founding merchant beta</h3>' +
-        '<p class="price">$29<span style="font-size:1rem;font-weight:400">/mo</span></p>' +
-        "<p>Agent console — weekly checks of whether your products surface in AI " +
-        "shopping answers, plus detected agent traffic on your own store. And the " +
-        "Checklane authentication badge: an earned, verifiable identity credential " +
-        "for your storefront. Cancel anytime.</p>" +
+        "<p>Ongoing checks that AI shoppers can still find your products, alerts " +
+        "when AI visits your store, and a Checklane badge proving your store is " +
+        "AI-ready.</p>" +
         '<label class="opt"><input type="checkbox" id="beta-opt"> ' +
-        "<span><strong>Notify me</strong> when the founding-merchant beta opens. " +
-        "No charge until you subscribe.</span></label>" +
+        "<span><strong>Notify me</strong> when the founding-merchant beta opens.</span></label>" +
         '<button class="btn" id="beta-btn">Request beta invite</button>' +
         '<p class="micro" id="beta-done" hidden style="color:#9fd9cd">You&rsquo;re on the list. ' +
         "We&rsquo;ll reach out when the beta opens.</p></div>";
@@ -116,18 +114,18 @@
 
   /* ---------------- audit flow ---------------- */
   var STATUS_LINES = [
-    "Fetching your homepage\u2026",
-    "Reading robots.txt and sitemap\u2026",
-    "Checking structured product data\u2026",
-    "Testing access as six AI-agent user agents\u2026",
-    "Scoring machine-readability\u2026",
-    "Compiling your fix list\u2026"
+    "Opening your homepage\u2026",
+    "Checking your sitemap and site rules\u2026",
+    "Reading your product info\u2026",
+    "Visiting as six AI shoppers\u2026",
+    "Seeing if AI can read your pages\u2026",
+    "Building your fix list\u2026"
   ];
 
   function setStatus(i) {
     var el = $("audit-status");
     el.hidden = false;
-    el.innerHTML = "<strong>Auditing\u2026</strong> " + esc(STATUS_LINES[i % STATUS_LINES.length]);
+    el.innerHTML = "<strong>Checking your store\u2026</strong> " + esc(STATUS_LINES[i % STATUS_LINES.length]);
   }
 
   function runAudit(domain) {
@@ -147,7 +145,7 @@
         statusEl.hidden = true;
         if (!res.ok || res.j.error) {
           resultEl.hidden = false;
-          resultEl.innerHTML = '<div class="err"><strong>Audit failed:</strong> ' +
+          resultEl.innerHTML = '<div class="err"><strong>Couldn\u2019t check your store:</strong> ' +
             esc((res.j && res.j.error) || "unknown error") + "</div>";
           return;
         }
@@ -162,7 +160,7 @@
         clearInterval(statusTimer);
         statusEl.hidden = true;
         resultEl.hidden = false;
-        resultEl.innerHTML = '<div class="err"><strong>Audit failed:</strong> ' +
+        resultEl.innerHTML = '<div class="err"><strong>Couldn\u2019t check your store:</strong> ' +
           esc(String(err)) + "</div>";
       });
   }
@@ -219,7 +217,7 @@
     if (!btn) return;
     btn.addEventListener("click", function () {
       if (!$("beta-opt").checked) {
-        btn.textContent = "Tick the checkbox first";
+        btn.textContent = "Tick the box first";
         setTimeout(function () { btn.textContent = "Request beta invite"; }, 1600);
         return;
       }
@@ -253,7 +251,7 @@
       var beta = $("sample-report").querySelector(".beta-box");
       if (beta) beta.remove(); // sample has no beta CTA
     }).catch(function () {
-      $("sample-report").innerHTML = '<p class="loading">Sample report unavailable in this demo.</p>';
+      $("sample-report").innerHTML = '<p class="loading">The sample report isn\u2019t loading right now.</p>';
     });
   });
 })();

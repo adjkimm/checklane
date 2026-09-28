@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Checklane — SEO for AI shopping agents</title>
-<meta name="description" content="Checklane measures how ready your store is for AI shopping agents — and shows you exactly how to fix it. Free agent-readiness audit.">
+<title>Checklane — Will AI shoppers find your store?</title>
+<meta name="description" content="Shoppers are starting to let AI do the buying. Checklane grades your store 0–100 on AI-shopper readiness and gives you the exact fix list. Free.">
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -27,30 +27,32 @@
   <!-- ============ HERO + LIVE AUDIT WIDGET ============ -->
   <section class="hero" id="audit">
     <div class="wrap">
-      <p class="kicker">Agent-readiness for small business</p>
-      <h1>SEO for AI shopping agents.</h1>
-      <p class="lede">AI agents are starting to shop for your customers. Checklane measures
-        how ready your store is — and shows you exactly how to fix it.</p>
+      <p class="kicker">Made for small stores</p>
+      <h1>Will AI shoppers find your store?</h1>
+      <p class="lede">Your customers are starting to let AI shop for them. Checklane grades
+        your store 0&ndash;100 on how ready it is &mdash; then hands you the exact fix list.</p>
 
       <form id="audit-form" class="audit-form" autocomplete="off">
         <input id="audit-domain" type="text" inputmode="url"
                placeholder="yourstore.com" aria-label="Your store domain">
         <button type="submit" class="btn btn-large">Run free audit</button>
       </form>
-      <p class="micro">Free. Reads only your site&rsquo;s public pages. No account needed.
-        Takes about 30&ndash;60 seconds.</p>
+      <p class="micro">Free. Takes about a minute. We only read your public pages &mdash;
+        no account, no login.</p>
+      <img class="hero-img" src="/static/img/hero-ai-shopper.webp" alt="A friendly AI robot with a shopping bag visiting a small storefront" loading="lazy" />
 
       <div id="audit-status" class="audit-status" hidden></div>
       <div id="audit-result" class="audit-result" hidden></div>
     </div>
   </section>
 
-  <!-- ============ ATTESTATION STRIP ============ -->
+  <!-- ============ STRAIGHT TALK STRIP ============ -->
   <section class="strip">
     <div class="wrap">
-      <p><strong>Our language is deliberate.</strong> Checklane <em>attests</em> to what it can
-        verify about your store. We never guarantee sales, rankings, or how any agent behaves.
-        A good score means agents <em>can</em> read and transact with you — not that they will.</p>
+      <p><strong>Straight talk.</strong> Checklane only reports what it can verify about
+        your store. We can&rsquo;t promise sales, rankings, or what any AI will do.
+        A good score means AI shoppers <em>can</em> find and buy from you &mdash; not
+        that they will.</p>
     </div>
   </section>
 
@@ -61,22 +63,22 @@
       <div class="steps">
         <div class="step">
           <div class="step-n">1</div>
-          <h3>Run the audit</h3>
-          <p>Enter your domain. We score your store 0&ndash;100 across five agent-readiness
-            categories, in about a minute.</p>
+          <h3>Test your store</h3>
+          <p>Type in your domain. About a minute later you get a 0&ndash;100 score
+            across the five things AI shoppers look for.</p>
         </div>
         <div class="step">
           <div class="step-n">2</div>
           <h3>Get the fix list</h3>
-          <p>Every failing check comes with a concrete fix, ranked by severity. Most are
-            an afternoon&rsquo;s work.</p>
+          <p>Every miss comes with a plain-English fix, ranked by what matters most.
+            Most take an afternoon.</p>
         </div>
         <div class="step">
           <div class="step-n">3</div>
-          <h3>Prove it monthly</h3>
-          <p>Founding merchants get the agent console — weekly visibility checks plus
-            detected agent traffic on your store — and the Checklane authentication badge.
-            <strong>$29/mo, cancel anytime.</strong></p>
+          <h3>Stay AI-ready</h3>
+          <p>Join the founding beta: ongoing checks that AI can still find your
+            products, alerts when AI visits your store, and a Checklane badge that
+            proves you&rsquo;re ready.</p>
         </div>
       </div>
     </div>
@@ -85,43 +87,47 @@
   <!-- ============ SAMPLE REPORT ============ -->
   <section class="section section-alt" id="sample">
     <div class="wrap">
-      <h2>What a report looks like</h2>
-      <p class="section-sub">Anonymized sample from a real small-business audit. Run your own
-        above to see your store&rsquo;s version.</p>
-      <div id="sample-report" class="report-card"><p class="loading">Loading sample report&hellip;</p></div>
+      <h2>See a real report</h2>
+      <p class="section-sub">Anonymized, from a real small store. Run your own
+        above to see yours.</p>
+      <div id="sample-report" class="report-card"><p class="loading">Loading a sample report&hellip;</p></div>
     </div>
   </section>
 
   <!-- ============ WHAT WE CHECK ============ -->
   <section class="section" id="checks">
     <div class="wrap">
-      <h2>What the audit checks</h2>
+      <h2>What we look at</h2>
       <div class="checks">
         <div class="check">
-          <h3>UCP capability profile</h3>
-          <p>Whether your store publishes a machine-readable profile under the open
-            Universal Commerce Protocol — the file agents read to discover that you accept
-            agent transactions.</p>
+          <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          <h3>The AI checkout handshake</h3>
+          <p>The behind-the-scenes file that tells AI shoppers &ldquo;yes, you can buy
+            here.&rdquo; Without it, they can&rsquo;t even start.</p>
         </div>
         <div class="check">
-          <h3>Structured product data</h3>
-          <p>schema.org Product markup: names, images, prices, availability, identifiers.
-            Agents parse structured data first; pages without it are effectively invisible.</p>
+          <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          <h3>Product info AI can read</h3>
+          <p>Clean, labeled details &mdash; names, photos, prices, stock. AI reads
+            labels first; unlabeled pages may as well be invisible.</p>
         </div>
         <div class="check">
-          <h3>Feed discoverability</h3>
-          <p>Sitemaps and machine-readable product feeds. If agents can&rsquo;t enumerate
-            your catalog, they can&rsquo;t sell it.</p>
+          <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <h3>Can AI find your products?</h3>
+          <p>Your sitemap and product feeds. If AI can&rsquo;t list your catalog,
+            it can&rsquo;t sell a thing.</p>
         </div>
         <div class="check">
-          <h3>Agent access</h3>
-          <p>We request your homepage as six known AI-agent user agents. If your bot
-            defenses block them, agents can&rsquo;t see your products at all.</p>
+          <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <h3>Are you blocking AI visitors?</h3>
+          <p>We visit your site as six popular AI shoppers. If your security turns
+            them away, real AI shoppers bounce too.</p>
         </div>
         <div class="check">
-          <h3>Machine-readability</h3>
-          <p>robots.txt posture toward AI crawlers, server-rendered content, and HTML
-            fundamentals. Agents read HTML, not your JavaScript bundle.</p>
+          <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <h3>Can AI read your pages?</h3>
+          <p>The basics: real text (not just JavaScript), readable pages, and no
+            accidental &ldquo;keep out&rdquo; signs.</p>
         </div>
       </div>
     </div>
@@ -130,37 +136,35 @@
   <!-- ============ FAQ ============ -->
   <section class="section section-alt" id="faq">
     <div class="wrap">
-      <h2>Questions</h2>
+      <h2>Common questions</h2>
       <div class="faq">
         <details>
-          <summary>Is this a certification or a guarantee?</summary>
-          <p>No. The audit is a readiness <em>assessment</em>: it attests to verifiable,
-            machine-readable facts about your store. It does not certify your business,
-            guarantee sales, or promise that any agent will recommend you.</p>
+          <summary>Does a good score guarantee sales?</summary>
+          <p>No. We grade what&rsquo;s technically true about your store &mdash; things
+            we can actually check. We don&rsquo;t certify your business, and nobody can
+            promise what an AI will recommend.</p>
         </details>
         <details>
-          <summary>Do you need access to my store?</summary>
-          <p>No. The audit reads only your site&rsquo;s public pages — the same pages any
-            visitor or agent would see. Nothing is installed, and no login is required.</p>
+          <summary>Do you need my password or admin access?</summary>
+          <p>Nope. We only read your public pages &mdash; the same ones any visitor
+            sees. Nothing to install, no login.</p>
         </details>
         <details>
           <summary>Will this make ChatGPT recommend my products?</summary>
-          <p>Nobody controls what agents recommend. What we measure is whether agents
-            <em>can</em> discover, read, and transact with your store. Readiness is
-            necessary; it isn&rsquo;t sufficient — and we&rsquo;ll always say so.</p>
+          <p>Nobody can promise that. What we measure is whether AI <em>can</em> find,
+            read, and buy from your store. Being findable is step one &mdash;
+            necessary, but not a guarantee.</p>
         </details>
         <details>
-          <summary>What does the $29/mo founding beta include?</summary>
-          <p>The agent console: weekly checks of whether your products surface in AI
-            shopping answers, plus detected agent traffic on your own store — the proof
-            that agents are finding you. And the Checklane authentication badge: an
-            earned, verifiable identity credential for your storefront. Cancel anytime.</p>
+          <summary>What does the founding beta include?</summary>
+          <p>Ongoing checks that your products still show up for AI shoppers, alerts
+            when AI visits your store, and a Checklane badge showing the world
+            you&rsquo;re AI-ready.</p>
         </details>
         <details>
           <summary>Who is Checklane?</summary>
-          <p>We&rsquo;re a small team building the trust layer for agentic commerce —
-            starting with the merchants the big platforms overlook. This audit is our
-            first product.</p>
+          <p>A small team making sure small stores don&rsquo;t get left behind as
+            shopping goes AI. This free audit is where we start.</p>
         </details>
       </div>
     </div>
@@ -170,9 +174,9 @@
 
 <footer class="footer">
   <div class="wrap">
-    <p><span class="brand-mark">▦</span> Checklane — agent-readiness for small business.</p>
-    <p class="micro">Checklane provides readiness assessments, not guarantees. Scores attest
-      to verifiable technical facts about a storefront at the time of the audit.</p>
+    <p><span class="brand-mark">▦</span> Checklane &mdash; helping small stores get found by AI shoppers.</p>
+    <p class="micro">Checklane grades what&rsquo;s technically verifiable about your store
+      at audit time. A score is not a promise of sales or AI recommendations.</p>
   </div>
 </footer>
 

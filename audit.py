@@ -469,7 +469,7 @@ def audit(domain):
     sitemap_info = _discover_sitemap(base)
 
     # ============ Category 1: UCP capability profile (20) ================ #
-    cat, cmax = "UCP capability profile", 20
+    cat, cmax = "AI checkout handshake", 20
     ucp_state = "missing"   # missing | discovery-only | profile-invalid | valid
     ucp_areas, ucp_url = [], None
     for path in UCP_CANDIDATES:
@@ -507,45 +507,40 @@ def audit(domain):
         break
     if ucp_state == "valid":
         s = 20
-        checks.append(check("ucp-valid", "UCP capability profile found and valid",
-                            "pass", "Published at %s; capability areas: %s."
-                            % (ucp_url, ", ".join(ucp_areas)), None))
+        checks.append(check("ucp-valid", "AI checkout file found",
+                            "pass", "Found at %s — your store tells AI shoppers "
+                            "it accepts AI checkouts." % ucp_url, None))
     elif ucp_state == "discovery-only":
         s = 10
         checks.append(check("ucp-discovery-only",
-                            "UCP discovery file found; versioned profile unverified",
-                            "partial", "A UCP discovery document exists at %s, but the "
-                            "versioned capability profile could not be verified."
-                            % ucp_url,
-                            "Make sure your versioned UCP profile URLs resolve and "
-                            "declare capabilities (discovery, cart, checkout, "
-                            "identity linking, order management).", "medium"))
+                            "AI checkout file found, but unverified",
+                            "partial", "There's a file at %s, but we couldn't "
+                            "verify it fully." % ucp_url,
+                            "Make sure your AI checkout file loads and spells out "
+                            "what AI shoppers can do: browse, add to cart, check "
+                            "out, and get order help.", "medium"))
     elif ucp_state == "profile-invalid":
         s = 8
-        checks.append(check("ucp-invalid", "UCP profile found but incomplete",
-                            "partial", "A UCP document exists at %s but declares "
-                            "fewer than 3 of the 5 capability areas (%s)."
-                            % (ucp_url, ", ".join(ucp_areas) or "none"),
-                            "Complete your UCP capability profile per the open "
-                            "Universal Commerce Protocol spec (Apache 2.0): declare "
-                            "discovery, cart, checkout, identity linking and order "
-                            "management capabilities. Partial profiles limit what "
-                            "agents can do with your store.", "high"))
+        checks.append(check("ucp-invalid", "AI checkout file is incomplete",
+                            "partial", "Found a file at %s, but it only covers %s — "
+                            "AI shoppers need the full picture."
+                            % (ucp_url, ", ".join(ucp_areas) or "nothing"),
+                            "Complete your AI checkout file: cover browsing, cart, "
+                            "checkout, and order help. A half-done file limits what "
+                            "AI shoppers can do with your store.", "high"))
     else:
         s = 0
-        checks.append(check("ucp-missing", "No UCP capability profile found",
-                            "fail", "Checked %s — none returned a UCP document."
+        checks.append(check("ucp-missing", "No AI checkout file found",
+                            "fail", "We checked the usual spots (%s) — nothing there."
                             % ", ".join(UCP_CANDIDATES),
-                            "Publish a UCP capability profile at /.well-known/ucp.json "
-                            "following the open Universal Commerce Protocol spec "
-                            "(Apache 2.0). Without it, compliant shopping agents "
-                            "cannot discover that your store accepts agent "
-                            "transactions. (Shopify stores: this is available via "
-                            "Shopify's agentic tooling.)", "high"))
+                            "Add a small file at /.well-known/ucp.json explaining how "
+                            "AI shoppers can buy from you. Without it, AI shoppers "
+                            "can't tell you accept AI checkouts. (On Shopify? Their "
+                            "AI tools can create this for you.)", "high"))
     scores[cat] = (s, cmax)
 
     # ============ Category 2: Structured product data (20) =============== #
-    cat, cmax = "Structured product data", 20
+    cat, cmax = "Product info AI can read", 20
     product_nodes = [n for n in ld_nodes
                      if "product" in node_types(n)]
     org_nodes = [n for n in ld_nodes
@@ -571,19 +566,20 @@ def audit(domain):
     s = 0
     if ld_nodes:
         s += 6
-        checks.append(check("jsonld-present", "JSON-LD structured data present",
-                            "pass", "%d JSON-LD node(s) found in homepage HTML."
-                            % len(ld_nodes), None))
+        checks.append(check("jsonld-present", "Labeled data found",
+                            "pass", "Found %d labeled data block(s) on your homepage. "
+                            "AI reads labels first — good." % len(ld_nodes), None))
     else:
-        checks.append(check("jsonld-present", "JSON-LD structured data present",
-                            "fail", "No application/ld+json blocks in homepage HTML.",
-                            "Add JSON-LD structured data (schema.org) to your pages. "
-                            "Agents parse structured data first; pages without it are "
-                            "effectively invisible to them.", "high"))
+        checks.append(check("jsonld-present", "No labeled data found",
+                            "fail", "No labeled product data on your homepage.",
+                            "Add labeled product info to your pages (the technical "
+                            "name is 'structured data'). AI reads labels before "
+                            "anything else — unlabeled pages are invisible to it.",
+                            "high"))
     if product_nodes:
         s += 6
-        checks.append(check("product-markup", "schema.org Product markup",
-                            "pass", "%d Product node(s) found (%s)."
+        checks.append(check("product-markup", "Products are labeled",
+                            "pass", "Found labels on %d product(s), spotted on your %s."
                             % (len(product_nodes), product_source), None))
         # completeness across product nodes
         fields = ["name", "image", "brand", "sku", "gtin", "mpn",
@@ -599,75 +595,74 @@ def audit(domain):
         s += round(8 * completeness)
         missing = [f for f in fields if f not in present]
         if missing:
-            checks.append(check("product-completeness", "Product markup completeness",
+            checks.append(check("product-completeness", "Product labels complete",
                                 "partial" if completeness >= 0.5 else "fail",
-                                "%d of %d recommended fields present; missing: %s."
+                                "%d of %d recommended details present. Missing: %s."
                                 % (len(present), len(fields), ", ".join(missing)),
-                                "Complete your Product markup: add %s. Agents use "
-                                "offers/price/availability to compare and transact; "
-                                "missing fields mean lost agent checkouts."
+                                "Fill in the missing details: %s. AI uses price and "
+                                "stock info to compare and buy — gaps mean lost sales."
                                 % ", ".join(missing), "medium"))
         else:
-            checks.append(check("product-completeness", "Product markup completeness",
-                                "pass", "All %d recommended fields present." % len(fields),
-                                None))
+            checks.append(check("product-completeness", "Product labels complete",
+                                "pass", "All %d recommended details filled in."
+                                % len(fields), None))
         if not offers_ok:
-            checks.append(check("offers-present", "Offer/price data in markup",
-                                "fail", "Product nodes exist but none carry offers "
-                                "(price/availability).",
-                                "Add offers with price, priceCurrency and availability to "
-                                "each Product node. Without machine-readable pricing, "
-                                "agents cannot present or buy your products.", "high"))
+            checks.append(check("offers-present", "Prices AI can read",
+                                "fail", "Your products are labeled, but none show a "
+                                "price AI can read.",
+                                "Add price, currency, and stock status to each "
+                                "product's labels. Without readable prices, AI can't "
+                                "show or sell your products.", "high"))
             s = max(0, s - 4)
     else:
-        checks.append(check("product-markup", "schema.org Product markup",
-                            "fail", "No Product-typed JSON-LD on the homepage%s."
+        checks.append(check("product-markup", "Products aren't labeled",
+                            "fail", "No product labels on your homepage%s."
                             % (" or a sampled product page"
                                if sitemap_info["first_product_url"] else ""),
-                            "Add schema.org Product markup with name, image, offers "
-                            "(price, currency, availability), brand and identifiers "
-                            "to product pages. This is the single highest-leverage "
-                            "agent-readiness fix for most stores.", "high"))
+                            "Label your products: name, photo, price, stock status, "
+                            "brand. This is the single biggest win for most stores.",
+                            "high"))
     if org_nodes:
-        checks.append(check("org-markup", "Organization identity markup",
-                            "pass", "Organization/LocalBusiness node found — agents "
-                            "can verify who you are.", None))
+        checks.append(check("org-markup", "Store identity labels",
+                            "pass", "Found your store's identity labels — AI can "
+                            "verify who you are.", None))
     else:
-        checks.append(check("org-markup", "Organization identity markup",
-                            "partial", "No Organization JSON-LD found.",
-                            "Add an Organization node (name, url, logo, sameAs links). "
-                            "It is the cheapest identity signal an agent can verify.",
-                            "low"))
+        checks.append(check("org-markup", "Store identity labels",
+                            "partial", "No identity labels found for your store.",
+                            "Add your store name, web address, and logo in labeled "
+                            "format. It's the easiest way for AI to verify you're "
+                            "legit.", "low"))
     scores[cat] = (min(s, cmax), cmax)
 
     # ============ Category 3: Feed discoverability (20) ================== #
-    cat, cmax = "Product feed discoverability", 20
+    cat, cmax = "Can AI find your products", 20
     s = 0
     si = sitemap_info
     if si["ok"]:
         s += 8
-        detail = "%d URL(s) listed" % si["url_count"]
+        detail = "%d page(s) listed" % si["url_count"]
         if si["is_index"]:
-            detail += " (via sitemap index)"
+            detail += " (through your sitemap index)"
         if si["product_url_count"]:
             s += 4
-            detail += "; ~%d product pages" % si["product_url_count"]
-        checks.append(check("sitemap", "XML sitemap present and parseable",
+            detail += "; about %d product pages" % si["product_url_count"]
+        checks.append(check("sitemap", "Sitemap found",
                             "pass", detail + ".", None))
     elif si.get("status") == 200:
         s += 3
-        checks.append(check("sitemap", "XML sitemap present and parseable",
-                            "partial", "sitemap.xml exists but did not parse as a "
-                            "URL sitemap or product sitemap.",
-                            "Make sure /sitemap.xml resolves to a valid sitemap or "
-                            "sitemap index listing your product URLs. Agents discover "
-                            "inventory through sitemaps.", "medium"))
+        checks.append(check("sitemap", "Sitemap found",
+                            "partial", "Your sitemap exists, but we couldn't read "
+                            "it properly.",
+                            "Make sure /sitemap.xml is a valid sitemap listing your "
+                            "product pages. It's how AI discovers your catalog.",
+                            "medium"))
     else:
-        checks.append(check("sitemap", "XML sitemap present and parseable",
-                            "fail", "No sitemap.xml (HTTP %s)." % si.get("status"),
-                            "Publish an XML sitemap at /sitemap.xml listing product "
-                            "URLs. It is the primary way automated agents discover "
-                            "your catalog.", "high"))
+        checks.append(check("sitemap", "No sitemap found",
+                            "fail", "No sitemap found (got a %s response)."
+                            % si.get("status"),
+                            "Publish a sitemap at /sitemap.xml listing your product "
+                            "pages. It's the main way AI finds everything you sell.",
+                            "high"))
     # Platform / feed signals
     pj = fetch(base + "/products.json?limit=1", ua=NORMAL_UA)
     polite()
@@ -676,7 +671,7 @@ def audit(domain):
         try:
             doc = json.loads(pj["body"])
             if isinstance(doc, dict) and isinstance(doc.get("products"), list):
-                feed_found = "Shopify /products.json (%d product(s) sampled)" % len(
+                feed_found = "Shopify product feed (%d product(s) checked)" % len(
                     doc["products"])
         except Exception:
             pass
@@ -691,52 +686,50 @@ def audit(domain):
                 break
     if feed_found:
         s += 6
-        checks.append(check("product-feed", "Machine-readable product feed",
+        checks.append(check("product-feed", "Product feed found",
                             "pass", "Found: %s." % feed_found, None))
     else:
-        checks.append(check("product-feed", "Machine-readable product feed",
-                            "fail", "No /products.json, /feed, /products.xml or "
-                            "/google-feed.xml found.",
-                            "Expose a machine-readable product feed (Shopify's "
-                            "/products.json, a Google-Shopping-format XML feed, or "
-                            "equivalent). Agents that cannot enumerate your catalog "
-                            "cannot sell it.", "high"))
+        checks.append(check("product-feed", "No product feed found",
+                            "fail", "Looked for a product feed at the usual addresses "
+                            "— none found.",
+                            "Publish a product feed (Shopify stores get one "
+                            "automatically; others can use a Google-Shopping-style "
+                            "feed). If AI can't list your catalog, it can't sell it.",
+                            "high"))
     # Agent instructions file (agents.md — the agent-web's robots.txt)
     am = fetch(base + "/agents.md", ua=NORMAL_UA)
     polite()
     if am["status"] == 200 and len(am["body"]) > 200 and \
             "agent" in am["body"][:2000].lower():
         s += 2
-        checks.append(check("agents-md", "Agent instructions file (agents.md)",
-                            "pass", "/agents.md present (%d bytes) — your store "
-                            "speaks directly to AI agents." % len(am["body"]), None))
+        checks.append(check("agents-md", "AI welcome note found",
+                            "pass", "Found your /agents.md (%d bytes) — your store "
+                            "talks to AI shoppers directly." % len(am["body"]), None))
     else:
-        checks.append(check("agents-md", "Agent instructions file (agents.md)",
-                            "fail", "No /agents.md found.",
-                            "Publish an /agents.md file describing how AI agents "
-                            "should interact with your store: what you sell, how "
-                            "to search your catalog, checkout and shipping basics, "
-                            "and contact info. It is the agent web's equivalent of "
-                            "a store sign — cheap to write, and agents read it "
-                            "first.", "medium"))
+        checks.append(check("agents-md", "No AI welcome note",
+                            "fail", "No /agents.md file found.",
+                            "Write a short /agents.md file: what you sell, how to "
+                            "browse your catalog, shipping basics, and how to reach "
+                            "you. Think of it as the welcome sign AI reads first.",
+                            "medium"))
     scores[cat] = (min(s, cmax), cmax)
 
     # ============ Category 4: Bot-wall / agent blockers (20) ============= #
-    cat, cmax = "Agent access (bot-wall check)", 20
+    cat, cmax = "Are AI shoppers blocked", 20
     s = 0
     base_title = _page_title(home["body"]).lower()
     base_len = len(home["body"])
     # Sanity: is the baseline itself a challenge page?
     base_challenge = _looks_like_challenge(home["body"])
     if base_challenge:
-        checks.append(check("agent-ua:baseline", "Baseline fetch",
-                            "fail", "Even our normal audit fetch received a page "
-                            "mentioning %r — the site challenges automated reads "
-                            "outright." % base_challenge,
-                            "Your bot defenses challenge automated readers before "
-                            "they see any content. Shopping agents read pages the "
-                            "way this probe does — allowlist known AI-agent user "
-                            "agents or exempt them from bot challenges.", "high"))
+        checks.append(check("agent-ua:baseline", "Basic read test",
+                            "fail", "Even a normal visit got a bot-check page "
+                            "mentioning %r — your site challenges automated "
+                            "readers." % base_challenge,
+                            "Your security challenges automated readers before they "
+                            "see any content. AI shoppers read pages the same way "
+                            "this test does — let known AI shoppers through, or "
+                            "they'll never see your products.", "high"))
     per_ua = round(cmax / len(AGENT_UAS), 2)
     for label, ua in AGENT_UAS.items():
         r = fetch(base + "/", ua=ua)
@@ -760,98 +753,97 @@ def audit(domain):
                           "normal page — likely a bot wall)" %
                           _page_title(r["body"])[:60])
         if blocked:
-            checks.append(check("agent-ua:" + label, "Access for " + label,
-                                "fail", "Blocked: %s." % reason,
-                                "Your site blocks automated reads from %s. Shopping "
-                                "agents read pages the way this probe does — a bot "
-                                "wall here means agents cannot see your products at "
-                                "all. Allowlist known AI-agent user agents or move "
-                                "bot management to behavior-based rules that exempt "
-                                "them." % label, "high"))
+            checks.append(check("agent-ua:" + label, "AI visitor: " + label,
+                                "fail", "Couldn't load your store: %s." % reason,
+                                "Your site blocks %s. AI shoppers read pages the way "
+                                "this test does — a block here means they can't see "
+                                "your products at all. Let known AI shoppers through, "
+                                "or switch to bot rules that exempt them." % label,
+                                "high"))
         else:
             s += per_ua
-            checks.append(check("agent-ua:" + label, "Access for " + label,
-                                "pass", "HTTP %s, same page as a normal visit."
-                                % r["status"], None))
+            checks.append(check("agent-ua:" + label, "AI visitor: " + label,
+                                "pass", "Loaded fine — sees the same page a person "
+                                "does.", None))
     s = min(round(s), cmax)
     if s == cmax:
-        checks.append(check("agent-access-summary", "Overall agent accessibility",
-                            "pass", "All %d tested agent user agents can read the "
+        checks.append(check("agent-access-summary", "Overall AI access",
+                            "pass", "All %d tested AI shoppers can read your "
                             "homepage." % len(AGENT_UAS), None))
     scores[cat] = (s, cmax)
 
     # ============ Category 5: Machine-readability basics (20) ============= #
-    cat, cmax = "Machine-readability basics", 20
+    cat, cmax = "Can AI read your pages", 20
     s = 0
     blocked_tokens = [t for t, p in ai_posture.items() if p == "blocked"]
     if blocked_tokens:
-        checks.append(check("robots-ai", "robots.txt posture toward AI crawlers",
-                            "fail", "robots.txt disallows: %s."
-                            % ", ".join(blocked_tokens),
-                            "Your robots.txt tells AI crawlers (%s) to stay out. "
-                            "If that is intentional, keep it — but know it makes "
-                            "your store invisible to AI shopping agents by design. "
-                            "If it was copied from a template, remove those lines."
+        checks.append(check("robots-ai", "Site rules for AI visitors",
+                            "fail", "Your site rules tell these AI visitors to stay "
+                            "out: %s." % ", ".join(blocked_tokens),
+                            "Your robots.txt blocks AI visitors (%s). If that's "
+                            "deliberate, fine — but it makes your store invisible to "
+                            "AI shoppers by design. If those lines came from a "
+                            "template, delete them."
                             % ", ".join(blocked_tokens), "high"))
     else:
         s += 8
-        checks.append(check("robots-ai", "robots.txt posture toward AI crawlers",
-                            "pass", "No AI-crawler tokens are disallowed in "
-                            "robots.txt.", None))
+        checks.append(check("robots-ai", "Site rules for AI visitors",
+                            "pass", "Your site rules don't block any AI visitors.",
+                            None))
     # JS-only rendering heuristic
     if home.get("truncated") and visible_len < 300:
         s += 3
-        checks.append(check("static-content", "Key content in static HTML",
-                            "partial", "Homepage exceeds our 1MB fetch window and the "
-                            "fetched portion is mostly scripts, so server-rendered "
-                            "content could not be fully confirmed.",
-                            "If product content (titles, prices, descriptions) "
-                            "renders client-side, agents reading raw HTML cannot "
-                            "see it. Verify key content is in the initial HTML "
-                            "response.", "medium"))
+        checks.append(check("static-content", "Content AI can see",
+                            "partial", "Your homepage is heavy on scripts, so we "
+                            "couldn't fully confirm your content loads without "
+                            "JavaScript.",
+                            "If your titles, prices, and descriptions only appear "
+                            "after JavaScript runs, AI reading the raw page misses "
+                            "them. Make sure key content is in the initial page load.",
+                            "medium"))
     elif visible_len < 300 and parser.script_srcs >= 5:
-        checks.append(check("static-content", "Key content in static HTML",
-                            "fail", "Only ~%d characters of visible text in the raw "
-                            "HTML with %d script tags — the page likely renders "
-                            "product content client-side." % (visible_len,
-                                                              parser.script_srcs),
-                            "Render key product content (titles, prices, descriptions) "
-                            "server-side or pre-render it. Agents read HTML, not your "
-                            "JavaScript bundle — JS-only content is invisible to them.",
+        checks.append(check("static-content", "Content AI can see",
+                            "fail", "Only ~%d characters of readable text in the raw "
+                            "page, with %d scripts — your content probably needs "
+                            "JavaScript to appear." % (visible_len,
+                                                       parser.script_srcs),
+                            "Put key content (titles, prices, descriptions) directly "
+                            "in the page, not behind JavaScript. AI reads the raw "
+                            "page — JavaScript-only content is invisible to it.",
                             "high"))
     else:
         s += 6
-        checks.append(check("static-content", "Key content in static HTML",
-                            "pass", "~%d characters of visible text in raw HTML; "
-                            "content is server-rendered." % visible_len, None))
+        checks.append(check("static-content", "Content AI can see",
+                            "pass", "~%d characters of readable text — your content "
+                            "loads without JavaScript." % visible_len, None))
     basics = [
-        ("page-title", "Page <title>", bool(parser.title.strip())),
-        ("meta-description", "Meta description", bool(parser.meta.get("description", "").strip())),
-        ("h1", "H1 heading", parser.h1_count > 0),
-        ("canonical", "Canonical URL", bool(parser.canonical)),
+        ("page-title", "Page title", bool(parser.title.strip())),
+        ("meta-description", "Page description", bool(parser.meta.get("description", "").strip())),
+        ("h1", "Main heading", parser.h1_count > 0),
+        ("canonical", "Canonical link", bool(parser.canonical)),
     ]
     basics_ok = sum(1 for _, _, ok in basics if ok)
     s += round(6 * basics_ok / len(basics))
     missing_basics = [label for _, label, ok in basics if not ok]
     if missing_basics:
-        checks.append(check("html-basics", "HTML fundamentals",
+        checks.append(check("html-basics", "Page basics",
                             "partial" if basics_ok >= 2 else "fail",
-                            "%d of 4 present; missing: %s."
+                            "%d of 4 basics present. Missing: %s."
                             % (basics_ok, ", ".join(missing_basics)),
-                            "Add the missing fundamentals (%s). They cost minutes "
-                            "and every parser — search or agent — relies on them."
+                            "Add what's missing (%s). Takes minutes — and every "
+                            "reader, search engine or AI, relies on these."
                             % ", ".join(missing_basics), "low"))
     else:
-        checks.append(check("html-basics", "HTML fundamentals",
-                            "pass", "Title, meta description, H1 and canonical all "
-                            "present.", None))
+        checks.append(check("html-basics", "Page basics",
+                            "pass", "Page title, description, main heading, and "
+                            "canonical link all present.", None))
     # product links in static HTML (informational)
     prod_links = sum(1 for h in parser.links
                      if "/product" in h.lower())
     if prod_links:
-        checks.append(check("product-links", "Product links in static HTML",
-                            "pass", "%d product-like links found in static HTML — "
-                            "agents can crawl your catalog." % prod_links, None))
+        checks.append(check("product-links", "Product links found",
+                            "pass", "%d product links found — AI can browse your "
+                            "catalog." % prod_links, None))
     scores[cat] = (min(s, cmax), cmax)
 
     # ---------------- assemble report ------------------------------------ #
@@ -885,33 +877,34 @@ def audit(domain):
 
 def _cat_check_ids(cat_name):
     return {
-        "UCP capability profile": {"ucp-valid", "ucp-invalid", "ucp-missing"},
-        "Structured product data": {"jsonld-present", "product-markup",
+        "AI checkout handshake": {"ucp-valid", "ucp-discovery-only",
+                                   "ucp-invalid", "ucp-missing"},
+        "Product info AI can read": {"jsonld-present", "product-markup",
                                     "product-completeness", "offers-present",
                                     "org-markup"},
-        "Product feed discoverability": {"sitemap", "product-feed"},
-        "Agent access (bot-wall check)": {"agent-ua", "agent-access-summary"},
-        "Machine-readability basics": {"robots-ai", "static-content",
+        "Can AI find your products": {"sitemap", "product-feed"},
+        "Are AI shoppers blocked": {"agent-ua", "agent-access-summary"},
+        "Can AI read your pages": {"robots-ai", "static-content",
                                        "html-basics", "product-links"},
     }.get(cat_name, set())
 
 
 def _summary(score, grade):
     if score >= 85:
-        return ("Strong agent-readiness. Your store publishes the machine-readable "
-                "signals AI shopping agents need. Remaining fixes are polish.")
+        return ("Excellent — your store speaks AI's language. The key signals AI "
+                "shoppers need are all here; what's left is polish.")
     if score >= 70:
-        return ("Mostly ready. A few gaps keep some agents from fully reading or "
-                "transacting with your store — the fix list below closes them.")
+        return ("Nearly there. A few gaps keep some AI shoppers from fully reading "
+                "or buying from your store — the fix list closes them.")
     if score >= 55:
-        return ("Partially ready. Agents can likely find you but will struggle to "
-                "read your catalog or verify your products. Work the high-severity "
-                "fixes first.")
+        return ("Halfway. AI can probably find you, but it'll struggle to read "
+                "your catalog or trust your products. Start with the high-priority "
+                "fixes.")
     if score >= 40:
-        return ("Weak agent-readiness. Your store is largely invisible to AI "
-                "shopping agents in its current state. The fix list is your roadmap.")
-    return ("Not agent-ready. Automated agents effectively cannot discover, read, "
-            "or transact with your store today. Start at the top of the fix list.")
+        return ("Needs work. Your store is mostly invisible to AI shoppers right "
+                "now. The fix list is your roadmap.")
+    return ("Not ready yet. AI shoppers effectively can't find, read, or buy from "
+            "your store today. Start at the top of the fix list.")
 
 
 def main():
