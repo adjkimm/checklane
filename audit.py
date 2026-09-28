@@ -24,7 +24,7 @@ import urllib.request
 import urllib.error
 from html.parser import HTMLParser
 
-VERSION = "1.1.0-m3"
+VERSION = "1.1.0-m1"
 FETCH_TIMEOUT = 12
 MAX_BODY = 1_000_000  # 1MB: some Shopify homepages carry 300KB+ of head scripts
 POLITENESS_DELAY = 0.4  # seconds between requests; polite crawling
@@ -137,6 +137,10 @@ def _assert_public_host(host):
     try:
         infos = socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)
     except socket.gaierror:
+        raise ValueError("could not resolve host")
+    except UnicodeError:
+        # IDNA codec errors (e.g. empty labels like foo..bar) carry
+        # interpreter internals; never let them escape as-is.
         raise ValueError("could not resolve host")
     ips = {info[4][0] for info in infos}
     if not ips:
@@ -296,16 +300,6 @@ def node_types(node):
     if isinstance(t, str):
         t = [t]
     return [str(x).lower() for x in t if isinstance(x, str)]
-
-
-def _is_product_node(node):
-    """True for Product and ProductGroup nodes.
-
-    ProductGroup is Schema.org's standard type for variant listings
-    (ubiquitous on Shopify/apparel): the name, brand, SKU, and offers
-    live on the group node, so it must count as a product node.
-    """
-    return any(t in ("product", "productgroup") for t in node_types(node))
 
 
 # --------------------------------------------------------------------------- #
@@ -542,14 +536,6 @@ STOREFRONT_ONLY_CATS = {
     "Can AI find your products",
 }
 
-# Mirror of the above: scored only for non-storefronts. Storefront
-# discovery (product sitemaps, feeds, llms.txt) is Category 3; a
-# marketing/lead-gen site still needs AI to FIND it, so non-storefronts
-# get their own discovery category instead of a free pass.
-NON_STOREFRONT_ONLY_CATS = {
-    "Can AI find your business",
-}
-
 
 def _storefront_signals(parser, product_nodes, ld_nodes, sitemap_info,
                         feed_found):
@@ -618,14 +604,6 @@ def audit(domain):
     except Exception:
         pass
     ld_nodes = parse_ld_json(parser.ld_json_raw)
-    faq_nodes = [n for n in ld_nodes if "faqpage" in node_types(n)]
-    faq_questions = 0
-    for _fq in faq_nodes:
-        _me = _fq.get("mainEntity", [])
-        if isinstance(_me, dict):
-            _me = [_me]
-        if isinstance(_me, list):
-            faq_questions += sum(1 for _q in _me if isinstance(_q, dict))
     visible_len = len(parser.visible_text)
 
     # ---- fetch robots.txt ----------------------------------------------- #
@@ -693,7 +671,7 @@ def audit(domain):
     if ucp_state == "valid":
         s = 12
         checks.append(check("ucp-valid", "UCP checkout file found and verified",
-                            "pass", "Found at %s covering %s, and its declared "
+                            "pass", "Found at %s covering %s — and its declared "
                             "endpoints answered our probe. This is the fast machine "
                             "path for UCP-capable agents (e.g. in Google AI Mode / "
                             "Gemini). Browser-driving agents buy through your normal "
@@ -706,7 +684,7 @@ def audit(domain):
                       if ucp_probe else "no endpoints declared in the profile")
         checks.append(check("ucp-unverified",
                             "UCP checkout file declared, UNVERIFIED",
-                            "partial", "Found a profile at %s covering %s. "
+                            "partial", "Found a profile at %s covering %s — "
                             "status: declared, unverified. We could not confirm "
                             "its endpoints work (%s). A static profile "
                             "pointing at dead endpoints is worse than none: agents "
@@ -714,7 +692,7 @@ def audit(domain):
                             "have worked."
                             % (ucp_url, ", ".join(ucp_areas), probe_note),
                             "Make the declared endpoints live, or take the file "
-                            "down until they are. A profile is a promise. Only "
+                            "down until they are. A profile is a promise — only "
                             "publish what actually answers. (Developer work: "
                             "working REST endpoints, payment handlers with signing "
                             "keys, order webhooks.)", "high"))
@@ -725,7 +703,7 @@ def audit(domain):
                             "partial", "There's a file at %s, but we couldn't "
                             "verify it fully." % ucp_url,
                             "Make sure your UCP profile loads and spells out what "
-                            "agents can do (browse, cart, checkout, order help), "
+                            "agents can do (browse, cart, checkout, order help) — "
                             "and that the endpoints it names actually answer. "
                             "Publishing the file is hours; the working backend "
                             "behind it is days to weeks of engineering.",
@@ -733,34 +711,34 @@ def audit(domain):
     elif ucp_state == "profile-invalid":
         s = 5
         checks.append(check("ucp-invalid", "UCP checkout file is incomplete",
-                            "partial", "Found a file at %s, but it only covers %s. "
+                            "partial", "Found a file at %s, but it only covers %s — "
                             "agents on the UCP machine path need the full picture."
                             % (ucp_url, ", ".join(ucp_areas) or "nothing"),
                             "Complete your UCP profile using the spec's real "
                             "capability names (`dev.ucp.shopping.*`): catalog "
                             "search/lookup, cart, checkout, identity, order. And "
-                            "verify every endpoint it declares actually answers. "
+                            "verify every endpoint it declares actually answers — "
                             "a half-done file limits what agents can do with your "
                             "store.", "high"))
     else:
         s = 0
         checks.append(check("ucp-missing", "No UCP checkout file found",
                             "fail", "We checked the standard discovery paths "
-                            "(starting with the canonical `/.well-known/ucp`). "
+                            "(starting with the canonical `/.well-known/ucp`) — "
                             "nothing there. Note: this is the faster machine path "
-                            "for UCP-capable agents, not a prerequisite. "
+                            "for UCP-capable agents, not a prerequisite — "
                             "browser-driving agents buy through normal checkout "
                             "today.",
                             "Publish your UCP capability profile at `/.well-known/ucp` "
-                            "(extensionless: the canonical discovery path in the "
+                            "(extensionless — the canonical discovery path in the "
                             "UCP spec; `/.well-known/ucp.json` also works as a "
                             "fallback). Be honest about the work: the file itself "
-                            "is hours, but a REAL UCP implementation (working "
+                            "is hours, but a REAL UCP implementation — working "
                             "REST endpoints, payment handlers with signing keys, "
-                            "order webhooks) is days to weeks of backend "
+                            "order webhooks — is days to weeks of backend "
                             "engineering. A static JSON pointing at dead endpoints "
                             "is worse than none. Platform shortcuts: on Shopify, "
-                            "turn on Shopify's Agentic sales channel / AI tools. "
+                            "turn on Shopify's Agentic sales channel / AI tools — "
                             "they publish the manifest for you (fast path). On a "
                             "custom build, scope it as a backend project "
                             "(days–weeks), not an afternoon task.", "high"))
@@ -769,7 +747,8 @@ def audit(domain):
 
     # ============ Category 2: Structured product data (20) =============== #
     cat, cmax = "Product info AI can read", 20
-    product_nodes = [n for n in ld_nodes if _is_product_node(n)]
+    product_nodes = [n for n in ld_nodes
+                     if "product" in node_types(n)]
     org_nodes = [n for n in ld_nodes
                  if "organization" in node_types(n) or "localbusiness" in node_types(n)]
     product_source = "homepage"
@@ -785,7 +764,7 @@ def audit(domain):
             except Exception:
                 pass
             pnodes = parse_ld_json(p2.ld_json_raw)
-            pprods = [n for n in pnodes if _is_product_node(n)]
+            pprods = [n for n in pnodes if "product" in node_types(n)]
             if pprods:
                 product_nodes = pprods
                 ld_nodes = pnodes
@@ -795,13 +774,13 @@ def audit(domain):
         s += 6
         checks.append(check("jsonld-present", "Labeled data found",
                             "pass", "Found %d labeled data block(s) on your homepage. "
-                            "AI reads labels first. Good." % len(ld_nodes), None))
+                            "AI reads labels first — good." % len(ld_nodes), None))
     else:
         checks.append(check("jsonld-present", "No labeled data found",
                             "fail", "No labeled product data on your homepage.",
                             "Add labeled product info to your pages (the technical "
                             "name is 'structured data'). AI reads labels before "
-                            "anything else. Unlabeled pages are invisible to it.",
+                            "anything else — unlabeled pages are invisible to it.",
                             "high"))
     if product_nodes:
         s += 6
@@ -827,7 +806,7 @@ def audit(domain):
                                 "%d of %d recommended details present. Missing: %s."
                                 % (len(present), len(fields), ", ".join(missing)),
                                 "Fill in the missing details: %s. AI uses price and "
-                                "stock info to compare and buy. Gaps mean lost sales."
+                                "stock info to compare and buy — gaps mean lost sales."
                                 % ", ".join(missing), "medium"))
         else:
             checks.append(check("product-completeness", "Product labels complete",
@@ -850,14 +829,13 @@ def audit(domain):
                             "brand. This is the single biggest win for most stores.",
                             "high"))
     if org_nodes:
-        s += 2
         checks.append(check("org-markup", "Store identity labels",
-                            "pass", "Found your site's identity labels. AI can "
+                            "pass", "Found your store's identity labels — AI can "
                             "verify who you are.", None))
     else:
         checks.append(check("org-markup", "Store identity labels",
-                            "partial", "No identity labels found for your site.",
-                            "Add your business name, web address, and logo in labeled "
+                            "partial", "No identity labels found for your store.",
+                            "Add your store name, web address, and logo in labeled "
                             "format. It's the easiest way for AI to verify you're "
                             "legit.", "low"))
     scores[cat] = (min(s, cmax), cmax)
@@ -879,7 +857,7 @@ def audit(domain):
         acp_s += 4
         checks.append(check("acp-feed-signals",
                             "ChatGPT feed signals: product IDs",
-                            "pass", "Your product labels include %s. The "
+                            "pass", "Your product labels include %s — the "
                             "identifier fields ChatGPT's product feed (ACP) keys "
                             "on." % ", ".join(sorted(id_fields)), None))
     elif "sku" in id_fields:
@@ -887,7 +865,7 @@ def audit(domain):
         checks.append(check("acp-feed-signals",
                             "ChatGPT feed signals: product IDs",
                             "partial", "You label SKUs, but no GTIN/MPN. ChatGPT's "
-                            "feed spec keys on GTINs. SKUs alone weaken matching.",
+                            "feed spec keys on GTINs — SKUs alone weaken matching.",
                             "Add GTIN/MPN to your product labels wherever your "
                             "products have barcodes or manufacturer part numbers. "
                             "It's the field ChatGPT's product feed matches on.",
@@ -898,7 +876,7 @@ def audit(domain):
                             "fail", "Your products are labeled, but none carry a "
                             "GTIN, MPN, or SKU that a product feed could key on.",
                             "Add product identifiers (GTIN/MPN/SKU) to your product "
-                            "labels. ChatGPT's feed spec keys on GTINs. Without "
+                            "labels. ChatGPT's feed spec keys on GTINs — without "
                             "identifiers your catalog is hard to match.",
                             "medium"))
     else:
@@ -918,7 +896,7 @@ def audit(domain):
         acp_s += 4
         checks.append(check("acp-policies", "ChatGPT feed signals: policy pages",
                             "pass", "Found shipping and returns/refund policy "
-                            "links. The policy signals ChatGPT's feed expects.",
+                            "links — the policy signals ChatGPT's feed expects.",
                             None))
     elif _ship_links or _ret_links:
         acp_s += 2
@@ -929,7 +907,7 @@ def audit(domain):
                             "Publish both a shipping policy and a returns/refund "
                             "policy page, linked from your homepage. ChatGPT's "
                             "product feed requires shipping info per item, and "
-                            "buyers (human or agent) expect policy pages.",
+                            "buyers — human or agent — expect policy pages.",
                             "medium"))
     else:
         checks.append(check("acp-policies", "ChatGPT feed signals: policy pages",
@@ -938,13 +916,13 @@ def audit(domain):
                             "Publish a shipping policy page and a returns/refund "
                             "policy page, linked from your homepage. ChatGPT's "
                             "product feed requires shipping info per item. "
-                            "ChatGPT-side path (ACP): there is no on-site file. "
+                            "ChatGPT-side path (ACP): there is no on-site file — "
                             "eligibility is a product feed upload plus OpenAI "
                             "partner onboarding, handled off-site. Apply via "
                             "OpenAI's merchant onboarding and publish your "
                             "catalog per OpenAI's Product Feed Spec (id, title, "
                             "price, availability, link, image, brand, GTIN, "
-                            "shipping). On Shopify or Etsy you're auto-enrolled. "
+                            "shipping). On Shopify or Etsy you're auto-enrolled — "
                             "nothing to apply for. This audit can't confirm your "
                             "onboarding status; only OpenAI can.", "medium"))
     _s1, _ = scores[CAT1]
@@ -1006,8 +984,8 @@ def audit(domain):
                             "pass", "Found: %s." % feed_found, None))
     else:
         checks.append(check("product-feed", "No product feed found",
-                            "fail", "Looked for a product feed at the usual addresses. "
-                            "None found.",
+                            "fail", "Looked for a product feed at the usual addresses "
+                            "— none found.",
                             "Publish a product feed (Shopify stores get one "
                             "automatically; others can use a Google-Shopping-style "
                             "feed). If AI can't list your catalog, it can't sell it.",
@@ -1016,33 +994,27 @@ def audit(domain):
     # convention) and/or /agents.md. NOT repo-root AGENTS.md — that's a
     # separate coding-agent convention for software projects, not websites.
     welcome_found = None
-    # welcome_present: any /llms.txt or /agents.md fetched OK (>200 bytes),
-    # regardless of whether it mentions "agent". Used by the
-    # business-discovery category so a plumber's plain-English file counts.
-    welcome_present = None
     for _wpath in ("/llms.txt", "/agents.md"):
         _wr = fetch(base + _wpath, ua=NORMAL_UA)
         polite()
-        if _wr["status"] == 200 and len(_wr["body"]) > 200:
-            if welcome_present is None:
-                welcome_present = (_wpath, len(_wr["body"]))
-            if "agent" in _wr["body"][:2000].lower():
-                welcome_found = (_wpath, len(_wr["body"]))
-                break
+        if (_wr["status"] == 200 and len(_wr["body"]) > 200
+                and "agent" in _wr["body"][:2000].lower()):
+            welcome_found = (_wpath, len(_wr["body"]))
+            break
     if welcome_found:
         s += 2
         checks.append(check("agents-md", "AI welcome note found",
-                            "pass", "Found your %s (%d bytes). Your site talks "
+                            "pass", "Found your %s (%d bytes) — your site talks "
                             "to AI visitors directly." % welcome_found, None))
     else:
         checks.append(check("agents-md", "No AI welcome note",
                             "fail", "No /llms.txt or /agents.md file found.",
-                            "Publish an /llms.txt file. An emerging "
-                            "convention some AI tools read, and/or an "
+                            "Publish an /llms.txt file — the established "
+                            "convention LLM tools actually read — and/or an "
                             "/agents.md as your agent welcome file: what you "
                             "sell, how to browse your catalog, shipping basics, "
                             "and how to reach you. (A repo-root AGENTS.md is a "
-                            "different thing: a coding-agent convention for "
+                            "different thing — a coding-agent convention for "
                             "software projects, not websites.)", "medium"))
     scores[cat] = (min(s, cmax), cmax)
 
@@ -1056,7 +1028,7 @@ def audit(domain):
     s = 0
     checks.append(check("bot-test-scope", "What this test measures",
                         "pass", "This checks whether known AI crawlers and "
-                        "on-demand fetchers can load your homepage, not whether "
+                        "on-demand fetchers can load your homepage — not whether "
                         "\"AI shoppers\" are blocked. Blocking training crawlers "
                         "(GPTBot, ClaudeBot) does NOT block AI shopping: "
                         "browser-driving agents buy through normal checkout, and "
@@ -1071,11 +1043,11 @@ def audit(domain):
     if base_challenge:
         checks.append(check("agent-ua:baseline", "Basic read test",
                             "fail", "Even a normal visit got a bot-check page "
-                            "mentioning %r. Your site challenges automated "
+                            "mentioning %r — your site challenges automated "
                             "readers." % base_challenge,
                             "Your security challenges automated readers before they "
                             "see any content. AI crawlers and fetchers read pages "
-                            "the same way this test does. Let the discovery "
+                            "the same way this test does — let the discovery "
                             "fetchers (OAI-SearchBot, Claude-SearchBot, "
                             "PerplexityBot, ChatGPT-User) through, or they can't "
                             "include your pages in AI answers.", "high"))
@@ -1099,24 +1071,24 @@ def audit(domain):
             elif base_title and _page_title(r["body"]).lower() != base_title:
                 blocked = True
                 reason = ("unexpected page served (title %r differs from the "
-                          "normal page, likely a bot wall)" %
+                          "normal page — likely a bot wall)" %
                           _page_title(r["body"])[:60])
         if blocked:
             checks.append(check("agent-ua:" + label, "AI visitor: " + label,
                                 "fail", "Couldn't load your store: %s. (%s.)"
                                 % (reason, role),
                                 "Your site blocked %s. %s. This test fetches like "
-                                "an automated AI visitor. A block here means that "
+                                "an automated AI visitor — a block here means that "
                                 "particular crawler/fetcher can't read your pages. "
                                 "What it does NOT mean: that AI shopping is "
                                 "blocked. If the block is deliberate (e.g. keeping "
-                                "training crawlers out), fine, but make sure the "
+                                "training crawlers out), fine — but make sure the "
                                 "discovery fetchers stay allowed, or AI answers "
                                 "can't cite you." % (label, role), "high"))
         else:
             s += per_ua
             checks.append(check("agent-ua:" + label, "AI visitor: " + label,
-                                "pass", "Loaded fine. Sees the same page a person "
+                                "pass", "Loaded fine — sees the same page a person "
                                 "does. (%s.)" % role, None))
     # ---- cart/checkout path probes (Board condition 4) ------------------ #
     # Homepage-only probing misses sites that let crawlers read marketing
@@ -1165,7 +1137,7 @@ def audit(domain):
                     "pages on a shopper's behalf may hit the same wall at "
                     "checkout." % (path_disp, short_label, reason),
                     "Your site blocked %s at %s (%s). Anti-bot protection "
-                    "on checkout is often deliberate and reasonable, but "
+                    "on checkout is often deliberate and reasonable — but "
                     "know that AI assistants which fetch pages for shoppers "
                     "may be affected too. If the block wasn't intentional, "
                     "let the discovery fetchers through."
@@ -1180,16 +1152,11 @@ def audit(domain):
                             "pass", "All %d tested AI crawlers and fetchers can "
                             "read your homepage. Note: browser-driving shopping "
                             "agents were never blocked by crawler rules in the "
-                            "first place. They buy through normal checkout."
+                            "first place — they buy through normal checkout."
                             % len(AGENT_UAS), None))
     scores[cat] = (s, cmax)
 
     # ============ Category 5: Machine-readability basics (20) ============= #
-    # ---------------- site-type detection (H2) --------------------------- #
-    sf_signals = _storefront_signals(parser, product_nodes, ld_nodes,
-                                     sitemap_info, feed_found)
-    site_type = "storefront" if len(sf_signals) >= 2 else "non-storefront"
-
     cat, cmax = "Can AI read your pages", 20
     s = 0
     blocked_tokens = [t for t, p in ai_posture.items() if p == "blocked"]
@@ -1199,7 +1166,7 @@ def audit(domain):
                             "out: %s." % ", ".join(blocked_tokens),
                             "Your robots.txt blocks AI visitors (%s). If that's "
                             "deliberate (e.g. keeping training crawlers out of "
-                            "your content), fine. Blocking them does not block "
+                            "your content), fine — blocking them does not block "
                             "AI shopping. But a blanket block also keeps you out "
                             "of AI search answers and product discovery. If those "
                             "lines came from a template, delete them."
@@ -1223,34 +1190,20 @@ def audit(domain):
     elif visible_len < 300 and parser.script_srcs >= 5:
         checks.append(check("static-content", "Content AI can see",
                             "fail", "Only ~%d characters of readable text in the raw "
-                            "page, with %d scripts. Your content probably needs "
+                            "page, with %d scripts — your content probably needs "
                             "JavaScript to appear." % (visible_len,
                                                        parser.script_srcs),
                             "Put key content (titles, prices, descriptions) directly "
                             "in the page, not behind JavaScript. AI fetchers read "
-                            "the raw page first. Content that only appears after "
+                            "the raw page first — content that only appears after "
                             "JavaScript runs is missed by simpler readers. "
                             "(Agent-mode shoppers drive real browsers, so this is "
                             "about robustness, not a hard block.)",
                             "high"))
-    elif visible_len < 300:
-        # Thin page: cap at partial marks, scaled by content length. A
-        # near-empty page must not earn full marks for "content AI can see".
-        thin_s = min(4, round(6 * visible_len / 300))
-        s += thin_s
-        checks.append(check("static-content", "Content AI can see",
-                            "partial", "~%d characters of readable text. Thin "
-                            "for AI readers. A few hundred characters of real "
-                            "copy describing what you do helps AI understand "
-                            "and cite your pages." % visible_len,
-                            "Add substantive copy to your homepage: a few "
-                            "hundred characters describing what you offer. AI "
-                            "readers work from visible text; thin pages give "
-                            "them little to work with.", "medium"))
     else:
         s += 6
         checks.append(check("static-content", "Content AI can see",
-                            "pass", "~%d characters of readable text. Your content "
+                            "pass", "~%d characters of readable text — your content "
                             "loads without JavaScript." % visible_len, None))
     basics = [
         ("page-title", "Page title", bool(parser.title.strip())),
@@ -1266,172 +1219,38 @@ def audit(domain):
                             "partial" if basics_ok >= 2 else "fail",
                             "%d of 4 basics present. Missing: %s."
                             % (basics_ok, ", ".join(missing_basics)),
-                            "Add what's missing (%s). Takes minutes, and every "
+                            "Add what's missing (%s). Takes minutes — and every "
                             "reader, search engine or AI, relies on these."
                             % ", ".join(missing_basics), "low"))
     else:
         checks.append(check("html-basics", "Page basics",
                             "pass", "Page title, description, main heading, and "
                             "canonical link all present.", None))
-    # FAQPage schema: storefronts only. Non-storefronts already score this as
-    # biz-faq in Category 6; scoring it here too would double-count one signal.
-    if site_type == "storefront":
-        if faq_questions:
-            s += 4 if faq_questions >= 3 else 2
-            checks.append(check("faq-schema", "Q&A labels found",
-                                "pass", "Found %d labeled questions and answers. "
-                                "AI agents can use your answers directly."
-                                % faq_questions, None))
-        elif faq_nodes:
-            checks.append(check("faq-schema", "Empty Q&A labels",
-                                "partial", "Your Q&A labels list no questions.",
-                                "Fill in your FAQPage structured data with real "
-                                "questions and answers. Empty labels give AI "
-                                "agents nothing to quote.", "low"))
-        else:
-            checks.append(check("faq-schema", "No Q&A labels",
-                                "fail", "No labeled Q&A found on your homepage.",
-                                "Add FAQPage structured data to your homepage's "
-                                "FAQ section. It lets AI agents use your answers "
-                                "directly when shoppers ask questions.", "low"))
     # product links in static HTML (informational)
     prod_links = sum(1 for h in parser.links
                      if "/product" in h.lower())
     if prod_links:
         checks.append(check("product-links", "Product links found",
-                            "pass", "%d product links found. AI can browse your "
+                            "pass", "%d product links found — AI can browse your "
                             "catalog." % prod_links, None))
     scores[cat] = (min(s, cmax), cmax)
 
-    # ============ Category 6: AI discovery, non-storefronts (20) ======== #
-    # Storefront discovery (product sitemaps, feeds, welcome file) is
-    # Category 3, which is N/A for non-storefronts. But a site that doesn't
-    # sell online still needs AI to FIND it — so non-storefronts are scored
-    # here instead. N/A for storefronts (their discovery is Category 3).
-    # Reuses data already fetched above: no extra network calls.
-    cat, cmax = "Can AI find your business", 20
-    s = 0
-    # AI welcome file: /llms.txt or /agents.md (fetched in Category 3)
-    if welcome_found:
-        _wpath, _wlen = welcome_found
-        if _wlen >= 1000:
-            s += 6
-            checks.append(check("biz-llms", "AI welcome file",
-                                "pass", "Found your %s (%d bytes): substantive "
-                                "guidance for AI visitors." % (_wpath, _wlen),
-                                None))
-        else:
-            s += 4
-            checks.append(check("biz-llms", "AI welcome file",
-                                "partial", "Found your %s, but it's thin (%d "
-                                "bytes), so AI visitors get little guidance."
-                                % (_wpath, _wlen),
-                                "Flesh out your %s: what you do, who it's for, "
-                                "your key pages, and how to reach you. A few "
-                                "hundred words beats a stub." % _wpath, "low"))
-    elif welcome_present:
-        _wpath, _wlen = welcome_present
-        s += 4
-        checks.append(check("biz-llms", "AI welcome file",
-                            "partial", "Found your %s, but it doesn't address "
-                            "AI visitors: AI tools look for guidance addressed "
-                            "to them." % _wpath,
-                            "Add a short section addressed to AI assistants "
-                            "(e.g. \"If you are an AI assistant...\") to your "
-                            "%s: what you do, who it's for, and how to reach "
-                            "you." % _wpath, "low"))
-    else:
-        checks.append(check("biz-llms", "AI welcome file",
-                            "fail", "No /llms.txt or /agents.md file found.",
-                            "Publish an /llms.txt file: what you do, who it's "
-                            "for, your key pages, and how to reach you. It's "
-                            "an emerging convention some AI tools read.",
-                            "medium"))
-    # sitemap.xml presence (product-page bonus is Category 3 territory)
-    if sitemap_info["ok"]:
-        s += 6
-        checks.append(check("biz-sitemap", "Sitemap found",
-                            "pass", "%d page(s) listed%s."
-                            % (sitemap_info["url_count"],
-                               " (through your sitemap index)"
-                               if sitemap_info["is_index"] else ""), None))
-    elif sitemap_info.get("status") == 200:
-        s += 3
-        checks.append(check("biz-sitemap", "Sitemap found",
-                            "partial", "Your sitemap exists, but we couldn't "
-                            "read it properly.",
-                            "Make sure /sitemap.xml is a valid sitemap listing "
-                            "your pages. It's how AI discovers everything you "
-                            "offer.", "medium"))
-    else:
-        checks.append(check("biz-sitemap", "Sitemap found",
-                            "fail", "No sitemap found (got a %s response)."
-                            % sitemap_info.get("status"),
-                            "Publish a sitemap at /sitemap.xml listing your "
-                            "pages. It's how search engines and AI crawlers "
-                            "discover all your pages.",
-                            "high"))
-    # Open Graph / share-tag completeness
-    _og_fields = ["og:title", "og:description", "og:image", "twitter:card"]
-    _og_ok = sum(1 for _k in _og_fields if parser.meta.get(_k, "").strip())
-    s += round(4 * _og_ok / len(_og_fields))
-    _og_missing = [_k for _k in _og_fields
-                   if not parser.meta.get(_k, "").strip()]
-    if _og_missing:
-        checks.append(check("biz-og", "Social/share tags",
-                            "partial" if _og_ok >= 2 else "fail",
-                            "%d of 4 share tags present. Missing: %s."
-                            % (_og_ok, ", ".join(_og_missing)),
-                            "Add the missing share tags (%s). They control how "
-                            "your pages look when shared or cited, including "
-                            "by AI assistants that show link previews."
-                            % ", ".join(_og_missing), "low"))
-    else:
-        checks.append(check("biz-og", "Social/share tags",
-                            "pass", "og:title, og:description, og:image, and "
-                            "twitter:card all present.", None))
-    # FAQ content presence
-    if any("faqpage" in node_types(n) for n in ld_nodes):
-        s += 4
-        checks.append(check("biz-faq", "FAQ content",
-                            "pass", "Found FAQ structured data. AI can lift "
-                            "your answers directly.", None))
-    elif re.search(r"frequently asked|\bfaq\b", parser.visible_text,
-                   re.IGNORECASE):
-        s += 2
-        checks.append(check("biz-faq", "FAQ content",
-                            "partial", "You mention a FAQ, but it isn't labeled "
-                            "data.",
-                            "Mark up your FAQ with FAQPage structured data so "
-                            "AI can lift your answers directly into responses.",
-                            "low"))
-    else:
-        checks.append(check("biz-faq", "FAQ content",
-                            "fail", "No FAQ content found.",
-                            "If you answer the same questions repeatedly, "
-                            "publish a FAQ section and label it with FAQPage "
-                            "structured data. FAQ answers are among the "
-                            "easiest content for AI to quote directly.",
-                            "low"))
-    scores[cat] = (min(s, cmax), cmax)
+    # ---------------- site-type detection (H2) --------------------------- #
+    sf_signals = _storefront_signals(parser, product_nodes, ld_nodes,
+                                     sitemap_info, feed_found)
+    site_type = "storefront" if len(sf_signals) >= 2 else "non-storefront"
 
     # ---------------- assemble report ------------------------------------ #
     categories = []
     for name, (earned, cmax_) in scores.items():
-        if site_type == "non-storefront" and name in STOREFRONT_ONLY_CATS:
-            na, na_reason = True, "no-storefront"
-        elif site_type == "storefront" and name in NON_STOREFRONT_ONLY_CATS:
-            na, na_reason = True, "is-storefront"
-        else:
-            na, na_reason = False, ""
+        na = site_type == "non-storefront" and name in STOREFRONT_ONLY_CATS
         cat_checks = [c for c in checks if c["id"].split(":")[0] in
                       _cat_check_ids(name)]
         categories.append({"name": name,
                            "score": 0 if na else earned,
                            "max": 0 if na else cmax_,
                            "checks": cat_checks,
-                           "na": na,
-                           "na_reason": na_reason})
+                           "na": na})
     na_ids = set()
     for _c in categories:
         if _c.get("na"):
@@ -1475,31 +1294,28 @@ def _cat_check_ids(cat_name):
         "Can AI find your products": {"sitemap", "product-feed", "agents-md"},
         "AI bot access": {"bot-test-scope", "agent-ua", "agent-access-summary"},
         "Can AI read your pages": {"robots-ai", "static-content",
-                                       "html-basics", "faq-schema",
-                                       "product-links"},
-        "Can AI find your business": {"biz-llms", "biz-sitemap", "biz-og",
-                                      "biz-faq"},
+                                       "html-basics", "product-links"},
     }.get(cat_name, set())
 
 
 def _summary(score, grade):
     if score >= 85:
-        return ("Excellent. Your site speaks AI's language. The key signals AI "
+        return ("Excellent — your store speaks AI's language. The key signals AI "
                 "agents need are all here; what's left is polish.")
     if score >= 70:
         return ("Nearly there. A few gaps keep some AI agents from fully reading "
-                "or transacting with your site. The fix list closes them.")
+                "or transacting with your store — the fix list closes them.")
     if score >= 55:
         return ("Halfway. AI can probably find you, but it'll struggle to read "
-                "your content or use the fast machine paths. Start with the "
+                "your catalog or use the fast machine paths. Start with the "
                 "high-priority fixes.")
     if score >= 40:
         return ("Needs work. AI agents will struggle with the machine-readable "
-                "layer of your site. Browser-based agents can still buy through "
+                "layer of your store — browser-based agents can still buy through "
                 "normal checkout, but slowly, and you're hard to compare. The fix "
                 "list is your roadmap.")
     return ("Not ready yet. The fast machine paths (UCP/ACP) are missing and the "
-            "basics are thin. Browser-driving agents can still reach you through "
+            "basics are thin — browser-driving agents can still reach you through "
             "normal checkout, but you're hard to compare and slow to transact "
             "with. Start at the top of the fix list.")
 
