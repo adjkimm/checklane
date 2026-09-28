@@ -534,6 +534,13 @@ button{padding:.7rem 1.2rem;border-radius:8px;border:0;background:#38bdf8;
 button:disabled{opacity:.6;cursor:default}
 #msg{margin:0;min-height:1.6em}
 a{color:#38bdf8}
+@media (max-width:640px){
+body{padding:1rem .75rem}
+main{margin:2rem auto;padding:1.5rem}
+form{flex-direction:column}
+input[type=email]{min-width:0;width:100%}
+button{width:100%;min-height:44px}
+}
 </style>
 </head>
 <body>

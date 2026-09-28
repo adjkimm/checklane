@@ -353,6 +353,30 @@ _CSS = """
     font-size:15px; font-weight:700; cursor:pointer}
   .btn:hover{background:var(--teal-dark)}
   .toolbar .note2{font-size:13px; color:var(--muted)}
+  .twrap{overflow-x:auto; -webkit-overflow-scrolling:touch; margin:12px -4px; padding:0 4px}
+  .twrap table{margin:0}
+  @media (max-width:640px){
+    .page{margin:12px 8px; border-radius:10px}
+    header.brand{padding:22px 20px 18px}
+    header.brand h1{font-size:24px}
+    header.brand .wordmark{font-size:19px}
+    .score-hero{padding:20px; gap:18px}
+    .score-ring{width:120px; height:120px}
+    .score-ring .inner{width:94px; height:94px}
+    .score-ring .num{font-size:30px}
+    main{padding:4px 16px 24px}
+    section h2.sec{font-size:17px}
+    .toolbar{padding:10px 16px; flex-wrap:wrap}
+    .toolbar .note2{flex-basis:100%}
+    footer{padding:18px 20px}
+    .card{padding:14px 16px}
+    .strategy .card{padding-left:56px}
+    table{font-size:13px}
+    th,td{padding:8px; white-space:normal}
+    .btn{min-height:44px}
+    code{overflow-wrap:break-word}
+    pre{font-size:12px; padding:12px}
+  }
   @media print{
     body{background:#fff}
     .page{margin:0; border:none; border-radius:0; box-shadow:none; max-width:none}
@@ -456,7 +480,7 @@ def _section_action_plan(report):
                 "with reality</strong><div style='font-size:13px;color:#57534e'>"
                 "Prices, availability, offerings — stale data trains agents to "
                 "distrust you.</div></td><td>DIY</td><td>Whenever things change</td></tr>" % n)
-        out.append("<table><tr><th>#</th><th>Action</th><th>Who</th><th>Effort</th></tr>%s</table>"
+        out.append("<div class=\"twrap\"><table><tr><th>#</th><th>Action</th><th>Who</th><th>Effort</th></tr>%s</table></div>"
                    % "".join(rows))
     if n == 0:
         out.append("<p>Nothing to fix — every check passed. Work §5 to stay ahead.</p>")
@@ -581,7 +605,7 @@ def _section_templates():
     thing — a coding-agent convention for software projects.)</p>
     <pre>%s</pre>
     <h3>Where each fix lives, by platform</h3>
-    <table><tr><th>Platform</th><th>UCP file</th><th>ChatGPT / ACP</th><th>Product labels &amp; sitemap</th></tr>
+    <div class="twrap"><table><tr><th>Platform</th><th>UCP file</th><th>ChatGPT / ACP</th><th>Product labels &amp; sitemap</th></tr>
     <tr><td><strong>Shopify</strong></td>
       <td>Turn on Shopify's Agentic sales channel / AI tools — they publish
       <code>/.well-known/ucp</code> for you.</td>
@@ -604,7 +628,7 @@ def _section_templates():
       <td>No native path today — custom development.</td>
       <td>Feed export + OpenAI merchant onboarding.</td>
       <td>Partial built-in product markup; sitemap automatic.</td></tr>
-    </table>
+    </table></div>
     </section>""" % (_esc(_TEMPLATE_JSONLD), _esc(_TEMPLATE_ROBOTS),
                      _esc(_TEMPLATE_LLMS))
 
@@ -657,7 +681,7 @@ def _section_glossary():
     return """
     <section><h2 class="sec">7 &nbsp; Glossary</h2>
     <p>Every jargon term in this report, in one place.</p>
-    <table>%s</table>
+    <div class="twrap"><table>%s</table></div>
     </section>""" % rows
 
 
