@@ -106,6 +106,10 @@ EFFORT = [
     ("static-content", "1 hr"),
     ("html-basics", "1 hr"),
     ("product-links", "30 min"),
+    ("biz-llms", "1 hr"),
+    ("biz-sitemap", "30 min"),
+    ("biz-og", "30 min"),
+    ("biz-faq", "1 hr"),
 ]
 
 # check-id prefix -> who can do it: DIY (store owner, no code) or Developer.
@@ -128,6 +132,10 @@ OWNER = [
     ("static-content", "Developer"),
     ("html-basics", "DIY"),
     ("product-links", "Developer"),
+    ("biz-llms", "DIY"),
+    ("biz-sitemap", "DIY"),
+    ("biz-og", "DIY"),
+    ("biz-faq", "DIY"),
 ]
 
 STRATEGIC_PLAYS = [
@@ -294,7 +302,6 @@ _CSS = """
     display:flex; flex-direction:column; align-items:center; justify-content:center}
   .score-ring .num{font-size:38px; font-weight:800; line-height:1}
   .score-ring .den{font-size:13px; color:var(--muted)}
-  .score-summary{min-width:0}
   .score-summary h2{margin:0 0 6px; font-size:22px}
   .grade{display:inline-block; color:#fff; font-weight:800;
     border-radius:8px; padding:2px 12px; font-size:15px; margin-left:8px; vertical-align:middle}
@@ -414,12 +421,20 @@ def _section_categories(report):
             fix_html = ('<div class="view-label">How to fix it</div>'
                         '<ol class="plain">%s</ol>') % items
         if cat.get("na"):
+            if cat.get("na_reason") == "is-storefront":
+                na_note = ('<strong>Not scored — storefront detected.</strong> '
+                           'This category only applies to sites that don\'t sell '
+                           'online, so it doesn\'t count toward your score. The '
+                           'checks below were still run; treat them as '
+                           'informational.')
+            else:
+                na_note = ('<strong>Not scored — no storefront detected.</strong> '
+                           'This category only applies to online stores, so it '
+                           'doesn\'t count toward your score. The checks below '
+                           'were still run; treat them as informational.')
             head = ('<h3>%s %s</h3>'
-                    '<div class="note"><strong>Not scored — no storefront '
-                    'detected.</strong> This category only applies to online '
-                    'stores, so it doesn\'t count toward your score. The checks '
-                    'below were still run; treat them as informational.</div>'
-                    % (_esc(name), '<span class="pill na">N/A</span>'))
+                    '<div class="note">%s</div>'
+                    % (_esc(name), '<span class="pill na">N/A</span>', na_note))
         else:
             head = ('<h3>%s — %s/%s %s</h3>'
                     % (_esc(name), _esc(score), _esc(cmax),
@@ -497,9 +512,9 @@ def _section_brief(report, domain, score):
             'score:</strong> this site doesn\'t sell products online (no '
             'storefront detected — no cart, no product data, no readable '
             'prices), so the three storefront-only categories are marked '
-            '<strong>N/A</strong> below and your score is computed from the two '
-            'categories that apply to every site. The N/A checks were still '
-            'run — they\'re informational, not failures.</div>'
+            '<strong>N/A</strong> below and your score is computed from the '
+            'three categories that apply to non-storefront sites. The N/A '
+            'checks were still run — they\'re informational, not failures.</div>'
         )
     return """
     <section><h2 class="sec">1 &nbsp; Executive brief — read this first</h2>
@@ -773,7 +788,9 @@ def render_report(report):
     <strong>Checklane</strong> grades what's technically verifiable about your store
     at audit time. This report is a roadmap, not a promise — a high score means
     nothing technical stands between you and the AI shopper; the rest is up to your
-    products, prices, and reputation.
+    products, prices, and reputation.<br>
+    Scoring updated Sep 2026: we now grade AI discoverability too, so this score
+    isn't directly comparable to audits run before then.
   </footer>
 </div>
 </body>
