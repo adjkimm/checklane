@@ -24,7 +24,7 @@ import urllib.request
 import urllib.error
 from html.parser import HTMLParser
 
-VERSION = "1.1.0-m1"
+VERSION = "1.1.0-m2"
 FETCH_TIMEOUT = 12
 MAX_BODY = 1_000_000  # 1MB: some Shopify homepages carry 300KB+ of head scripts
 POLITENESS_DELAY = 0.4  # seconds between requests; polite crawling
@@ -298,6 +298,16 @@ def node_types(node):
     return [str(x).lower() for x in t if isinstance(x, str)]
 
 
+def _is_product_node(node):
+    """True for Product and ProductGroup nodes.
+
+    ProductGroup is Schema.org's standard type for variant listings
+    (ubiquitous on Shopify/apparel): the name, brand, SKU, and offers
+    live on the group node, so it must count as a product node.
+    """
+    return any(t in ("product", "productgroup") for t in node_types(node))
+
+
 # --------------------------------------------------------------------------- #
 # robots.txt
 # --------------------------------------------------------------------------- #
@@ -532,6 +542,14 @@ STOREFRONT_ONLY_CATS = {
     "Can AI find your products",
 }
 
+# Mirror of the above: scored only for non-storefronts. Storefront
+# discovery (product sitemaps, feeds, llms.txt) is Category 3; a
+# marketing/lead-gen site still needs AI to FIND it, so non-storefronts
+# get their own discovery category instead of a free pass.
+NON_STOREFRONT_ONLY_CATS = {
+    "Can AI find your business",
+}
+
 
 def _storefront_signals(parser, product_nodes, ld_nodes, sitemap_info,
                         feed_found):
@@ -743,8 +761,7 @@ def audit(domain):
 
     # ============ Category 2: Structured product data (20) =============== #
     cat, cmax = "Product info AI can read", 20
-    product_nodes = [n for n in ld_nodes
-                     if "product" in node_types(n)]
+    product_nodes = [n for n in ld_nodes if _is_product_node(n)]
     org_nodes = [n for n in ld_nodes
                  if "organization" in node_types(n) or "localbusiness" in node_types(n)]
     product_source = "homepage"
@@ -760,7 +777,7 @@ def audit(domain):
             except Exception:
                 pass
             pnodes = parse_ld_json(p2.ld_json_raw)
-            pprods = [n for n in pnodes if "product" in node_types(n)]
+            pprods = [n for n in pnodes if _is_product_node(n)]
             if pprods:
                 product_nodes = pprods
                 ld_nodes = pnodes
@@ -990,13 +1007,19 @@ def audit(domain):
     # convention) and/or /agents.md. NOT repo-root AGENTS.md — that's a
     # separate coding-agent convention for software projects, not websites.
     welcome_found = None
+    # welcome_present: any /llms.txt or /agents.md fetched OK (>200 bytes),
+    # regardless of whether it mentions "agent". Used by the
+    # business-discovery category so a plumber's plain-English file counts.
+    welcome_present = None
     for _wpath in ("/llms.txt", "/agents.md"):
         _wr = fetch(base + _wpath, ua=NORMAL_UA)
         polite()
-        if (_wr["status"] == 200 and len(_wr["body"]) > 200
-                and "agent" in _wr["body"][:2000].lower()):
-            welcome_found = (_wpath, len(_wr["body"]))
-            break
+        if _wr["status"] == 200 and len(_wr["body"]) > 200:
+            if welcome_present is None:
+                welcome_present = (_wpath, len(_wr["body"]))
+            if "agent" in _wr["body"][:2000].lower():
+                welcome_found = (_wpath, len(_wr["body"]))
+                break
     if welcome_found:
         s += 2
         checks.append(check("agents-md", "AI welcome note found",
@@ -1005,8 +1028,8 @@ def audit(domain):
     else:
         checks.append(check("agents-md", "No AI welcome note",
                             "fail", "No /llms.txt or /agents.md file found.",
-                            "Publish an /llms.txt file. The established "
-                            "convention LLM tools actually read, and/or an "
+                            "Publish an /llms.txt file. An emerging "
+                            "convention some AI tools read, and/or an "
                             "/agents.md as your agent welcome file: what you "
                             "sell, how to browse your catalog, shipping basics, "
                             "and how to reach you. (A repo-root AGENTS.md is a "
@@ -1196,6 +1219,20 @@ def audit(domain):
                             "(Agent-mode shoppers drive real browsers, so this is "
                             "about robustness, not a hard block.)",
                             "high"))
+    elif visible_len < 300:
+        # Thin page: cap at partial marks, scaled by content length. A
+        # near-empty page must not earn full marks for "content AI can see".
+        thin_s = min(4, round(6 * visible_len / 300))
+        s += thin_s
+        checks.append(check("static-content", "Content AI can see",
+                            "partial", "~%d characters of readable text — thin "
+                            "for AI readers. A few hundred characters of real "
+                            "copy describing what you do helps AI understand "
+                            "and cite your pages." % visible_len,
+                            "Add substantive copy to your homepage — a few "
+                            "hundred characters describing what you offer. AI "
+                            "readers work from visible text; thin pages give "
+                            "them little to work with.", "medium"))
     else:
         s += 6
         checks.append(check("static-content", "Content AI can see",
@@ -1231,6 +1268,118 @@ def audit(domain):
                             "catalog." % prod_links, None))
     scores[cat] = (min(s, cmax), cmax)
 
+    # ============ Category 6: AI discovery, non-storefronts (20) ======== #
+    # Storefront discovery (product sitemaps, feeds, welcome file) is
+    # Category 3, which is N/A for non-storefronts. But a site that doesn't
+    # sell online still needs AI to FIND it — so non-storefronts are scored
+    # here instead. N/A for storefronts (their discovery is Category 3).
+    # Reuses data already fetched above: no extra network calls.
+    cat, cmax = "Can AI find your business", 20
+    s = 0
+    # AI welcome file: /llms.txt or /agents.md (fetched in Category 3)
+    if welcome_found:
+        _wpath, _wlen = welcome_found
+        if _wlen >= 1000:
+            s += 6
+            checks.append(check("biz-llms", "AI welcome file",
+                                "pass", "Found your %s (%d bytes) — substantive "
+                                "guidance for AI visitors." % (_wpath, _wlen),
+                                None))
+        else:
+            s += 4
+            checks.append(check("biz-llms", "AI welcome file",
+                                "partial", "Found your %s, but it's thin (%d "
+                                "bytes) — AI visitors get little guidance."
+                                % (_wpath, _wlen),
+                                "Flesh out your %s: what you do, who it's for, "
+                                "your key pages, and how to reach you. A few "
+                                "hundred words beats a stub." % _wpath, "low"))
+    elif welcome_present:
+        _wpath, _wlen = welcome_present
+        s += 4
+        checks.append(check("biz-llms", "AI welcome file",
+                            "partial", "Found your %s, but it doesn't address "
+                            "AI visitors — AI tools look for guidance addressed "
+                            "to them." % _wpath,
+                            "Add a short section addressed to AI assistants "
+                            "(e.g. \"If you are an AI assistant...\") to your "
+                            "%s: what you do, who it's for, and how to reach "
+                            "you." % _wpath, "low"))
+    else:
+        checks.append(check("biz-llms", "AI welcome file",
+                            "fail", "No /llms.txt or /agents.md file found.",
+                            "Publish an /llms.txt file: what you do, who it's "
+                            "for, your key pages, and how to reach you. It's "
+                            "an emerging convention some AI tools read.",
+                            "medium"))
+    # sitemap.xml presence (product-page bonus is Category 3 territory)
+    if sitemap_info["ok"]:
+        s += 6
+        checks.append(check("biz-sitemap", "Sitemap found",
+                            "pass", "%d page(s) listed%s."
+                            % (sitemap_info["url_count"],
+                               " (through your sitemap index)"
+                               if sitemap_info["is_index"] else ""), None))
+    elif sitemap_info.get("status") == 200:
+        s += 3
+        checks.append(check("biz-sitemap", "Sitemap found",
+                            "partial", "Your sitemap exists, but we couldn't "
+                            "read it properly.",
+                            "Make sure /sitemap.xml is a valid sitemap listing "
+                            "your pages. It's how AI discovers everything you "
+                            "offer.", "medium"))
+    else:
+        checks.append(check("biz-sitemap", "Sitemap found",
+                            "fail", "No sitemap found (got a %s response)."
+                            % sitemap_info.get("status"),
+                            "Publish a sitemap at /sitemap.xml listing your "
+                            "pages. It's how search engines and AI crawlers "
+                            "discover all your pages.",
+                            "high"))
+    # Open Graph / share-tag completeness
+    _og_fields = ["og:title", "og:description", "og:image", "twitter:card"]
+    _og_ok = sum(1 for _k in _og_fields if parser.meta.get(_k, "").strip())
+    s += round(4 * _og_ok / len(_og_fields))
+    _og_missing = [_k for _k in _og_fields
+                   if not parser.meta.get(_k, "").strip()]
+    if _og_missing:
+        checks.append(check("biz-og", "Social/share tags",
+                            "partial" if _og_ok >= 2 else "fail",
+                            "%d of 4 share tags present. Missing: %s."
+                            % (_og_ok, ", ".join(_og_missing)),
+                            "Add the missing share tags (%s). They control how "
+                            "your pages look when shared or cited — including "
+                            "by AI assistants that show link previews."
+                            % ", ".join(_og_missing), "low"))
+    else:
+        checks.append(check("biz-og", "Social/share tags",
+                            "pass", "og:title, og:description, og:image, and "
+                            "twitter:card all present.", None))
+    # FAQ content presence
+    if any("faqpage" in node_types(n) for n in ld_nodes):
+        s += 4
+        checks.append(check("biz-faq", "FAQ content",
+                            "pass", "Found FAQ structured data — AI can lift "
+                            "your answers directly.", None))
+    elif re.search(r"frequently asked|\bfaq\b", parser.visible_text,
+                   re.IGNORECASE):
+        s += 2
+        checks.append(check("biz-faq", "FAQ content",
+                            "partial", "You mention a FAQ, but it isn't labeled "
+                            "data.",
+                            "Mark up your FAQ with FAQPage structured data so "
+                            "AI can lift your answers directly into responses.",
+                            "low"))
+    else:
+        checks.append(check("biz-faq", "FAQ content",
+                            "fail", "No FAQ content found.",
+                            "If you answer the same questions repeatedly, "
+                            "publish a FAQ section and label it with FAQPage "
+                            "structured data — FAQ answers are among the "
+                            "easiest content for AI to quote directly.",
+                            "low"))
+    scores[cat] = (min(s, cmax), cmax)
+
     # ---------------- site-type detection (H2) --------------------------- #
     sf_signals = _storefront_signals(parser, product_nodes, ld_nodes,
                                      sitemap_info, feed_found)
@@ -1239,14 +1388,20 @@ def audit(domain):
     # ---------------- assemble report ------------------------------------ #
     categories = []
     for name, (earned, cmax_) in scores.items():
-        na = site_type == "non-storefront" and name in STOREFRONT_ONLY_CATS
+        if site_type == "non-storefront" and name in STOREFRONT_ONLY_CATS:
+            na, na_reason = True, "no-storefront"
+        elif site_type == "storefront" and name in NON_STOREFRONT_ONLY_CATS:
+            na, na_reason = True, "is-storefront"
+        else:
+            na, na_reason = False, ""
         cat_checks = [c for c in checks if c["id"].split(":")[0] in
                       _cat_check_ids(name)]
         categories.append({"name": name,
                            "score": 0 if na else earned,
                            "max": 0 if na else cmax_,
                            "checks": cat_checks,
-                           "na": na})
+                           "na": na,
+                           "na_reason": na_reason})
     na_ids = set()
     for _c in categories:
         if _c.get("na"):
@@ -1291,6 +1446,8 @@ def _cat_check_ids(cat_name):
         "AI bot access": {"bot-test-scope", "agent-ua", "agent-access-summary"},
         "Can AI read your pages": {"robots-ai", "static-content",
                                        "html-basics", "product-links"},
+        "Can AI find your business": {"biz-llms", "biz-sitemap", "biz-og",
+                                      "biz-faq"},
     }.get(cat_name, set())
 
 
