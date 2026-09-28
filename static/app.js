@@ -69,7 +69,8 @@
       '<div class="score-row">' + scoreRing(report.score) +
       '<div class="score-meta"><h3><span class="grade grade-' + report.grade + '">' +
       report.grade + "</span>" + esc(report.domain) + "</h3>" +
-      "<p>" + esc(report.summary) + "</p></div></div>" +
+      "<p>" + esc(report.summary) + "</p>" +
+      "<p class=\"scoring-note\">Scoring updated Sep 2026: we now grade AI discoverability too, so this score isn\u2019t directly comparable to earlier audits.</p></div></div>" +
       ctas +
       "</div>";
   }
