@@ -119,7 +119,8 @@ PURCHASES_FILE = os.path.join(DATA_DIR, "purchases.jsonl")
 RECEIPT_GUARANTEE = (
     "Love it or your money back — full refund within 7 days, no questions asked. "
     "And if your report ever fails to generate or you lose access, "
-    "we'll re-run it or refund you."
+    "we'll re-run it for you or refund you — your choice. "
+    "Refunds go back to your card, typically within 5–10 business days."
 )
 
 # --- Rate limiting (H5): per-IP token buckets ---------------------------- #
@@ -540,7 +541,7 @@ a{color:#38bdf8}
 <main>
 <h1>Lost your report?</h1>
 <p class="dim">Enter the email you used at checkout and we&rsquo;ll resend
-your receipt with a permanent link to your full report.</p>
+your receipt with your report link.</p>
 <form id="f">
 <input type="email" id="email" name="email" required
   placeholder="you@yourbusiness.com" autocomplete="email">
@@ -626,6 +627,22 @@ class Handler(BaseHTTPRequestHandler):
         path = parsed.path
         qs = urllib.parse.parse_qs(parsed.query or "")
 
+        # Board condition 2: per-IP rate limit on GET /api/* too (the
+        # concurrency cap alone lets one hostile IP hold both audit slots).
+        if path.startswith("/api/"):
+            ip = _client_ip(self)
+            ok, retry = _rate_limit_ok(ip, key="api-get")
+            if not ok:
+                return self._send(
+                    429, json.dumps({"error": "rate limit exceeded — "
+                                              "please slow down"}),
+                    "application/json; charset=utf-8",
+                    {"Retry-After": str(retry)})
+        if path == "/sitemap.xml":
+            # Legal §5 blocker fix: the teaser draft claims we fixed the
+            # missing sitemap — make it true.
+            return self._serve_file("sitemap.xml",
+                                    "application/xml; charset=utf-8")
         if path == "/":
             return self._serve_file("index.html")
         if path == "/sample-report":
