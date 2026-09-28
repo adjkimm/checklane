@@ -405,7 +405,7 @@ check("blocked path does not tank category score",
 
 # ------------------------------------------------- 8. v1.1.0-m2 changes
 print("== v1.1.0-m2: version ==")
-check("engine version bumped", audit.VERSION == "1.1.0-m2", audit.VERSION)
+check("engine version bumped", audit.VERSION == "1.1.0-m3", audit.VERSION)
 
 print("== v1.1.0-m2: _is_product_node ==")
 check("Product matches", audit._is_product_node({"@type": "Product"}))
@@ -569,6 +569,128 @@ check("partial fix tells owner to address AI assistants",
       "If you are an AI assistant" in
       next(c for c in cat(rep, "Can AI find your business")["checks"]
            if c["id"] == "biz-llms")["fix"])
+
+
+print("== v1.1.0-m3: FAQPage scoring (storefronts) ==")
+audit.normalize_domain = lambda d: d
+audit.polite = lambda: None
+
+
+def _q(n, a):
+    return ('{"@type":"Question","name":"Q%d",'
+            '"acceptedAnswer":{"@type":"Answer","text":"A%d"}}' % (n, a))
+
+
+def _faq_ld(*qs):
+    return ('<script type="application/ld+json">{"@context":"https://schema.org",'
+            '"@type":"FAQPage","mainEntity":[%s]}</script>'
+            % ",".join(_q(i + 1, i + 1) for i in range(qs[0] if qs else 0)))
+
+
+FAQ_3Q_LD = _faq_ld(3)
+FAQ_2Q_LD = _faq_ld(2)
+FAQ_EMPTY_LD = ('<script type="application/ld+json">{"@context":"https://schema.org",'
+                '"@type":"FAQPage","mainEntity":[]}</script>')
+ORG_LD = ('<script type="application/ld+json">{"@context":"https://schema.org",'
+          '"@type":"Organization","name":"Shop","url":"https://x/"}</script>')
+
+
+def make_store_home(extra_ld="", weak=False):
+    head = "<html><head><title>Shop</title>"
+    if not weak:
+        head += ('<meta name="description" content="d">'
+                 '<link rel="canonical" href="https://x/">')
+    head += "</head><body>"
+    if not weak:
+        head += "<h1>Shop</h1>"
+    return (head + "<p>" + "x" * 500 + "</p>"
+            '<script type="application/ld+json">{"@context":"https://schema.org",'
+            '"@type":"Product","name":"Widget","sku":"W-1",'
+            '"offers":{"@type":"Offer","price":"29.99","priceCurrency":"USD"}}</script>'
+            + extra_ld + '<a href="/cart">cart</a></body></html>')
+
+
+def c5of(rep):
+    return cat(rep, "Can AI read your pages")
+
+
+def faq_check(rep):
+    return next(c for c in c5of(rep)["checks"] if c["id"] == "faq-schema")
+
+
+# 3+ questions -> pass, +4, softened copy (RC-2)
+audit.fetch = make_m2_fetch(make_store_home(FAQ_3Q_LD, weak=True))
+rep = audit.audit("127.0.0.1")
+check("storefront fixture classified storefront",
+      rep["site_type"] == "storefront", rep["site_type"])
+fq = faq_check(rep)
+check("3+ questions -> pass", fq["status"] == "pass", fq["status"])
+check("pass detail avoids word-for-word (RC-2)",
+      "use your answers directly" in fq["detail"], fq["detail"][:90])
+audit.fetch = make_m2_fetch(make_store_home("", weak=True))
+rep_base = audit.audit("127.0.0.1")
+_base5 = c5of(rep_base)["score"]
+check("3+ questions add exactly 4 points",
+      c5of(rep)["score"] - _base5 == 4,
+      "%s vs %s" % (c5of(rep)["score"], _base5))
+
+# 1-2 questions -> pass, +2 (RC-3 graduation)
+audit.fetch = make_m2_fetch(make_store_home(FAQ_2Q_LD, weak=True))
+rep2 = audit.audit("127.0.0.1")
+fq2 = faq_check(rep2)
+check("1-2 questions still pass", fq2["status"] == "pass", fq2["status"])
+check("1-2 questions add exactly 2 points (RC-3)",
+      c5of(rep2)["score"] - _base5 == 2,
+      "%s vs %s" % (c5of(rep2)["score"], _base5))
+
+# missing -> fail, low, fix scoped to homepage (RC-1)
+fm = faq_check(rep_base)
+check("missing faq-schema -> fail", fm["status"] == "fail", fm["status"])
+check("missing faq-schema severity is low", fm["severity"] == "low",
+      fm["severity"])
+check("fail fix scoped to homepage (RC-1)", "homepage's" in fm["fix"],
+      fm["fix"][:90])
+
+# empty -> partial, 0 points
+audit.fetch = make_m2_fetch(make_store_home(FAQ_EMPTY_LD, weak=True))
+rep_e = audit.audit("127.0.0.1")
+fe = faq_check(rep_e)
+check("empty faq-schema -> partial", fe["status"] == "partial", fe["status"])
+check("empty faq-schema scores no points",
+      c5of(rep_e)["score"] == _base5,
+      "%s vs %s" % (c5of(rep_e)["score"], _base5))
+
+print("== v1.1.0-m3: no double-count on non-storefronts ==")
+BIZ_HOME = ("<html><head><title>Acme Plumbing</title>"
+            '<meta name="description" content="d">'
+            '<link rel="canonical" href="https://x/"></head>'
+            "<body><h1>Acme Plumbing</h1><p>" + "x" * 500 + "</p>"
+            + FAQ_3Q_LD + "</body></html>")
+audit.fetch = make_m2_fetch(BIZ_HOME)
+rep_b = audit.audit("127.0.0.1")
+check("biz fixture is non-storefront",
+      rep_b["site_type"] == "non-storefront", rep_b["site_type"])
+check("biz-faq passes in Category 6",
+      check_status(rep_b, "Can AI find your business", "biz-faq") == "pass")
+check("no faq-schema in Cat 5 for non-storefronts (no double count)",
+      not any(c["id"] == "faq-schema" for c in c5of(rep_b)["checks"]))
+
+print("== v1.1.0-m3: org-markup, caps, version ==")
+audit.fetch = make_m2_fetch(make_store_home(ORG_LD))
+rep_o = audit.audit("127.0.0.1")
+audit.fetch = make_m2_fetch(make_store_home())
+rep_no = audit.audit("127.0.0.1")
+_c2o = cat(rep_o, "Product info AI can read")["score"]
+_c2n = cat(rep_no, "Product info AI can read")["score"]
+check("org-markup adds exactly 2 points", _c2o - _c2n == 2,
+      "%s vs %s" % (_c2o, _c2n))
+audit.fetch = make_m2_fetch(make_store_home(FAQ_3Q_LD))
+rep_f = audit.audit("127.0.0.1")
+check("Category 5 capped at 20", c5of(rep_f)["score"] == 20,
+      str(c5of(rep_f)["score"]))
+check("engine VERSION is 1.1.0-m3", audit.VERSION == "1.1.0-m3", audit.VERSION)
+check("report carries m3 engine tag",
+      rep["engine"] == "checklane-audit/1.1.0-m3", rep["engine"])
 
 audit.fetch = _real_fetch
 audit.polite = _real_polite

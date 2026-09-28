@@ -24,7 +24,7 @@ import urllib.request
 import urllib.error
 from html.parser import HTMLParser
 
-VERSION = "1.1.0-m2"
+VERSION = "1.1.0-m3"
 FETCH_TIMEOUT = 12
 MAX_BODY = 1_000_000  # 1MB: some Shopify homepages carry 300KB+ of head scripts
 POLITENESS_DELAY = 0.4  # seconds between requests; polite crawling
@@ -618,6 +618,14 @@ def audit(domain):
     except Exception:
         pass
     ld_nodes = parse_ld_json(parser.ld_json_raw)
+    faq_nodes = [n for n in ld_nodes if "faqpage" in node_types(n)]
+    faq_questions = 0
+    for _fq in faq_nodes:
+        _me = _fq.get("mainEntity", [])
+        if isinstance(_me, dict):
+            _me = [_me]
+        if isinstance(_me, list):
+            faq_questions += sum(1 for _q in _me if isinstance(_q, dict))
     visible_len = len(parser.visible_text)
 
     # ---- fetch robots.txt ----------------------------------------------- #
@@ -842,6 +850,7 @@ def audit(domain):
                             "brand. This is the single biggest win for most stores.",
                             "high"))
     if org_nodes:
+        s += 2
         checks.append(check("org-markup", "Store identity labels",
                             "pass", "Found your site's identity labels. AI can "
                             "verify who you are.", None))
@@ -1176,6 +1185,11 @@ def audit(domain):
     scores[cat] = (s, cmax)
 
     # ============ Category 5: Machine-readability basics (20) ============= #
+    # ---------------- site-type detection (H2) --------------------------- #
+    sf_signals = _storefront_signals(parser, product_nodes, ld_nodes,
+                                     sitemap_info, feed_found)
+    site_type = "storefront" if len(sf_signals) >= 2 else "non-storefront"
+
     cat, cmax = "Can AI read your pages", 20
     s = 0
     blocked_tokens = [t for t, p in ai_posture.items() if p == "blocked"]
@@ -1259,6 +1273,27 @@ def audit(domain):
         checks.append(check("html-basics", "Page basics",
                             "pass", "Page title, description, main heading, and "
                             "canonical link all present.", None))
+    # FAQPage schema: storefronts only. Non-storefronts already score this as
+    # biz-faq in Category 6; scoring it here too would double-count one signal.
+    if site_type == "storefront":
+        if faq_questions:
+            s += 4 if faq_questions >= 3 else 2
+            checks.append(check("faq-schema", "Q&A labels found",
+                                "pass", "Found %d labeled questions and answers. "
+                                "AI agents can use your answers directly."
+                                % faq_questions, None))
+        elif faq_nodes:
+            checks.append(check("faq-schema", "Empty Q&A labels",
+                                "partial", "Your Q&A labels list no questions.",
+                                "Fill in your FAQPage structured data with real "
+                                "questions and answers. Empty labels give AI "
+                                "agents nothing to quote.", "low"))
+        else:
+            checks.append(check("faq-schema", "No Q&A labels",
+                                "fail", "No labeled Q&A found on your homepage.",
+                                "Add FAQPage structured data to your homepage's "
+                                "FAQ section. It lets AI agents use your answers "
+                                "directly when shoppers ask questions.", "low"))
     # product links in static HTML (informational)
     prod_links = sum(1 for h in parser.links
                      if "/product" in h.lower())
@@ -1380,11 +1415,6 @@ def audit(domain):
                             "low"))
     scores[cat] = (min(s, cmax), cmax)
 
-    # ---------------- site-type detection (H2) --------------------------- #
-    sf_signals = _storefront_signals(parser, product_nodes, ld_nodes,
-                                     sitemap_info, feed_found)
-    site_type = "storefront" if len(sf_signals) >= 2 else "non-storefront"
-
     # ---------------- assemble report ------------------------------------ #
     categories = []
     for name, (earned, cmax_) in scores.items():
@@ -1445,7 +1475,8 @@ def _cat_check_ids(cat_name):
         "Can AI find your products": {"sitemap", "product-feed", "agents-md"},
         "AI bot access": {"bot-test-scope", "agent-ua", "agent-access-summary"},
         "Can AI read your pages": {"robots-ai", "static-content",
-                                       "html-basics", "product-links"},
+                                       "html-basics", "faq-schema",
+                                       "product-links"},
         "Can AI find your business": {"biz-llms", "biz-sitemap", "biz-og",
                                       "biz-faq"},
     }.get(cat_name, set())
