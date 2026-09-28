@@ -5,7 +5,6 @@ Checklane M1 demo server. Stdlib only.
 Serves the landing page + audit widget API locally:
   GET  /                        -> landing page
   GET  /static/<path>            -> static assets
-  GET  /sample-report            -> anonymized sample audit (static JSON)
   GET  /api/audit?domain=X       -> run live audit (score-only JSON + report_token)
   GET  /api/config               -> public config (report price display)
   GET  /api/report?session_id=X  -> full report after verified Stripe payment
@@ -645,9 +644,6 @@ class Handler(BaseHTTPRequestHandler):
                                     "application/xml; charset=utf-8")
         if path == "/":
             return self._serve_file("index.html")
-        if path == "/sample-report":
-            return self._serve_file("sample-report.json",
-                                    "application/json; charset=utf-8")
         if path.startswith("/static/"):
             return self._serve_file(path[len("/static/"):])
         if path in ("/terms", "/privacy", "/refund"):

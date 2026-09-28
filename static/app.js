@@ -307,11 +307,5 @@
       window.location = "/report?session_id=" + encodeURIComponent(sessionId);
     }
 
-    // Illustrative sample report (synthetic JSON, rendered read-only, score only).
-    fetch("/sample-report").then(function (r) { return r.json(); }).then(function (rep) {
-      $("sample-report").innerHTML = scoreCard(rep, true);
-    }).catch(function () {
-      $("sample-report").innerHTML = '<p class="loading">The sample report isn\u2019t loading right now.</p>';
-    });
   });
 })();
