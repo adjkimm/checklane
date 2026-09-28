@@ -53,11 +53,6 @@ body {
 .audit-form input:focus { outline: none; border-color: var(--accent); }
 .micro { font-size: .85rem; color: var(--muted); }
 
-.strip { background: var(--ink); color: #dbe4ec; padding: 22px 0; }
-.strip p { margin: 0; font-size: .98rem; }
-.strip strong { color: #fff; }
-.strip em { color: #fff; font-style: normal; border-bottom: 2px solid var(--accent); }
-
 .section { padding: 64px 0; }
 .section-alt { background: var(--alt); }
 .section h2 { font-size: 1.9rem; margin: 0 0 8px; }
