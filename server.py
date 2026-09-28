@@ -584,6 +584,27 @@ class Handler(BaseHTTPRequestHandler):
     server_version = "ChecklaneM1/1.0"
 
     # -- helpers -------------------------------------------------------- #
+    def _security_headers(self):
+        """The standard security headers, on EVERY response.
+
+        H8 (extended): X-Content-Type-Options, CSP frame-ancestors, and
+        Referrer-Policy ride on all app responses (JSON, XML, plain text,
+        and HTML alike), not just HTML pages. HSTS stays host-gated:
+        only on real hosts, never on localhost, where it would pin a
+        non-TLS origin in the browser. Cache-Control: no-store is set here
+        (not separately in _send) so framework-generated error pages get it
+        exactly once too, via the end_headers() hook.
+        """
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Content-Security-Policy",
+                         "frame-ancestors 'self'")
+        self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
+        host = (self.headers.get("Host") or "").split(":")[0].lower()
+        if host not in ("localhost", "127.0.0.1", ""):
+            self.send_header("Strict-Transport-Security",
+                             "max-age=31536000; includeSubDomains")
+
     def _send(self, code, body, ctype="application/json; charset=utf-8",
               extra_headers=None):
         if isinstance(body, str):
@@ -591,23 +612,29 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
-        if ctype.startswith("text/html"):
-            # H8: security headers on HTML responses (the payments page and
-            # everything else that renders in a browser).
-            self.send_header("X-Content-Type-Options", "nosniff")
-            self.send_header("Content-Security-Policy",
-                             "frame-ancestors 'self'")
-            host = (self.headers.get("Host") or "").split(":")[0].lower()
-            if host not in ("localhost", "127.0.0.1", ""):
-                # HSTS only on real hosts — never on localhost, where it
-                # would pin a non-TLS origin in the browser.
-                self.send_header("Strict-Transport-Security",
-                                 "max-age=31536000; includeSubDomains")
+        self._security_headers()
         for k, v in (extra_headers or {}).items():
             self.send_header(k, v)
         self.end_headers()
-        self.wfile.write(body)
+        # HEAD responses carry the exact headers a GET would (including
+        # Content-Length) but no body.
+        if not getattr(self, "_head_only", False):
+            self.wfile.write(body)
+
+    def send_error(self, code, message=None, explain=None):
+        # Framework-generated error pages (501 for unimplemented methods,
+        # 400 for a bad request line, ...) bypass _send(), so give them
+        # the same security headers via the end_headers() hook below.
+        self._in_framework_error = True
+        try:
+            super().send_error(code, message, explain)
+        finally:
+            self._in_framework_error = False
+
+    def end_headers(self):
+        if getattr(self, "_in_framework_error", False):
+            self._security_headers()
+        super().end_headers()
 
     def _json(self, code, obj):
         self._send(code, json.dumps(obj), "application/json; charset=utf-8")
@@ -628,6 +655,17 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
     # -- routing --------------------------------------------------------- #
+    def do_HEAD(self):
+        # HEAD mirrors GET exactly: same routes, same response headers
+        # (including Content-Length), but no body. The _head_only flag is
+        # read by _send(); side-effecting GET routes (/api/*, /report)
+        # answer 405 under HEAD rather than running.
+        self._head_only = True
+        try:
+            self.do_GET()
+        finally:
+            self._head_only = False
+
     def do_GET(self):
         parsed = urllib.parse.urlsplit(self.path)
         path = parsed.path
@@ -636,6 +674,14 @@ class Handler(BaseHTTPRequestHandler):
         # Board condition 2: per-IP rate limit on GET /api/* too (the
         # concurrency cap alone lets one hostile IP hold both audit slots).
         if path.startswith("/api/"):
+            if getattr(self, "_head_only", False):
+                # A HEAD must never trigger an audit run, a Stripe
+                # verification, or any other /api/* side effect. Mirror the
+                # GET headers contract via 405, not by running the route.
+                return self._send(
+                    405, json.dumps({"error": "method not allowed"}),
+                    "application/json; charset=utf-8",
+                    {"Allow": "GET"})
             ip = _client_ip(self)
             ok, retry = _rate_limit_ok(ip, key="api-get")
             if not ok:
@@ -731,6 +777,13 @@ class Handler(BaseHTTPRequestHandler):
             # Paid full report as a print-ready HTML page. Same Stripe
             # verification as /api/report; the Download PDF button uses the
             # browser print dialog (Save as PDF). No new dependencies.
+            if getattr(self, "_head_only", False):
+                # Stripe verification is a side effect: never run it for a
+                # HEAD probe.
+                return self._send(
+                    405, json.dumps({"error": "method not allowed"}),
+                    "application/json; charset=utf-8",
+                    {"Allow": "GET"})
             session_id = (qs.get("session_id") or [""])[0].strip()
             report, err = verified_paid_report(session_id)
             if err:

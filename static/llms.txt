@@ -24,6 +24,6 @@ agents can find, read, and buy from a site.
 
 - Monitoring beta (ongoing AI-readiness checks + alerts):
   https://getchecklane.com/#beta
-- Services (AI agent platform management, AI agent marketing):
+- Services (AI agent platform management, AI agent findability):
   https://getchecklane.com/#services
 - FAQ: https://getchecklane.com/#faq
