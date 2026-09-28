@@ -108,6 +108,40 @@ body {
   .loading-card h3 { font-size: 1.2rem; }
 }
 
+/* prominent audit loading card (indeterminate: the audit is one server call) */
+.audit-status:has(.loading-card) { background: transparent; border: 0; padding: 0; }
+.loading-card {
+  margin: 24px auto 0; max-width: 560px; width: 100%;
+  padding: 32px 28px; background: var(--card);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: 0 6px 24px rgba(22, 32, 43, 0.10); text-align: center;
+}
+.loading-card h3 { margin: 14px 0 4px; font-size: 1.4rem; }
+.loading-card .status-line { margin: 12px 0 4px; color: var(--muted); min-height: 1.6em; }
+.loading-card .micro { margin: 8px 0 0; }
+.spinner {
+  width: 46px; height: 46px; margin: 0 auto;
+  border: 4px solid var(--line); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.progress-track {
+  height: 8px; border-radius: 99px; background: var(--line);
+  overflow: hidden; margin: 16px 0 4px;
+}
+.progress-bar {
+  height: 100%; width: 40%; border-radius: 99px; background: var(--accent);
+  animation: loadslide 1.5s ease-in-out infinite;
+}
+@keyframes loadslide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}
+@media (max-width: 640px) {
+  .loading-card { padding: 24px 18px; margin-top: 20px; }
+  .loading-card h3 { font-size: 1.2rem; }
+}
+
 .report-card { background: var(--card); border: 1px solid var(--line);
   border-radius: var(--radius); padding: 28px; margin-top: 16px; }
 .score-row { display: flex; gap: 24px; align-items: center; margin-bottom: 8px; }
