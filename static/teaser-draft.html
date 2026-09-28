@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>We audit ourselves — Checklane (DRAFT, internal review)</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="draft-banner">
+  <div class="wrap">
+    <strong>DRAFT ONLY — not live.</strong> Internal review: Advisory Board, then Legal,
+    before anything here is published. Do not link from the site.
+  </div>
+</div>
+
+<main class="section">
+  <div class="wrap legal">
+    <p class="kicker">Dogfooding, in public</p>
+    <h1>Our own site, audited live</h1>
+    <p class="section-sub">We run every store through the same engine —
+      including our own. On September 27, 2026, getchecklane.com scored
+      <strong>38/100</strong>. We're not hiding it. We're improving it in public.</p>
+
+    <div class="score-row">
+      <svg class="score-ring" width="130" height="130" viewBox="0 0 130 130">
+        <circle cx="65" cy="65" r="54" fill="none" stroke="#e2e9f0" stroke-width="12"/>
+        <circle cx="65" cy="65" r="54" fill="none" stroke="#b3362b" stroke-width="12"
+          stroke-linecap="round" stroke-dasharray="129.0 339.3" transform="rotate(-90 65 65)"/>
+        <text x="65" y="62" text-anchor="middle" font-size="30" font-weight="700" fill="#16202b">38</text>
+        <text x="65" y="84" text-anchor="middle" font-size="12" fill="#5b6b7c">/ 100</text>
+      </svg>
+      <div class="score-meta">
+        <h3><span class="grade grade-F">F</span> getchecklane.com</h3>
+        <p>Report CL-20260928-38 — September 27, 2026. This audit is excluded
+          from our merchant-count gate (self audits don't count).</p>
+      </div>
+    </div>
+
+    <h2>What the audit found</h2>
+    <ul>
+      <li><strong>No sitemap.</strong> There's no map of the site for machine
+        visitors to list what's on it. Basic plumbing, now fixed.</li>
+      <li><strong>No structured data.</strong> The pages had no machine-readable
+        labels — AI had to guess what everything was. We're adding them.</li>
+      <li><strong>Missing canonical link.</strong> Pages didn't name their
+        canonical URL — the kind of small "keep out" sign a confused AI reader
+        trips over. Fixed.</li>
+    </ul>
+    <p>The good news, and it's real: everything dragging the score down is
+      plumbing, not strategy. No rebrand, no new products — a few hours of
+      focused technical work.</p>
+
+    <h2>One honest caveat</h2>
+    <p>We're a marketing site, not a storefront — and two of the five categories
+      assume products, prices, and a cart. That part of the F is an artifact of
+      the scoring, not of our site, so we're building site-type-aware scoring
+      before we publish the "after" number. We'd rather fix the ruler than
+      celebrate with a bent one.</p>
+
+    <h2>The play</h2>
+    <p>Fix the gaps above, re-audit, publish the before → after. Same engine,
+      same rules, us first. That's the deal we're offering every store on this
+      page — so we're taking it ourselves.</p>
+
+    <p class="micro">Checklane grades what's technically verifiable at audit
+      time. A score is not a promise of sales or AI recommendations. This draft
+      is pending Advisory Board and Legal review before publication.</p>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <p><span class="brand-mark">▦</span> Checklane &mdash; helping small stores get found by AI shoppers.</p>
+    <p class="micro footer-links"><a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/refund">Refund policy</a></p>
+  </div>
+</footer>
+
+</body>
+</html>

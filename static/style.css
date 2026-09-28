@@ -162,6 +162,25 @@ body {
 .svc-form .btn { justify-self: start; }
 #svc-done { font-weight: 600; color: var(--good); }
 
+/* legal pages + drafts */
+.legal { max-width: 720px; }
+.legal h2 { font-size: 1.35rem; margin: 28px 0 8px; }
+.legal ul, .legal ol { padding-left: 22px; }
+.legal li { margin-bottom: 8px; color: var(--muted); }
+.footer-links a { color: var(--muted); text-decoration: underline;
+  text-underline-offset: 2px; }
+.footer-links a:hover { color: var(--ink); }
+.draft-banner { background: #fbf3dd; border-bottom: 2px solid var(--warn);
+  padding: 10px 0; font-size: .9rem; color: var(--ink); }
+
+/* paywall peek */
+.peek { background: var(--card); border: 1px solid var(--line);
+  border-radius: 8px; padding: 16px 18px; margin: 0 0 18px; }
+.peek-cap { font-weight: 600; margin: 0 0 4px; }
+.peek .fix-preview { margin: 8px 0 0; }
+.peek .micro { margin: 10px 0 0; }
+.redact { font-family: monospace; color: #b8c4d1; letter-spacing: 1px; }
+
 @media (max-width: 640px) {
   .hero h1 { font-size: 2.1rem; }
   .steps { grid-template-columns: 1fr; }

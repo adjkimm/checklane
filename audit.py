@@ -24,7 +24,7 @@ import urllib.request
 import urllib.error
 from html.parser import HTMLParser
 
-VERSION = "1.0.0-m1"
+VERSION = "1.1.0-m1"
 FETCH_TIMEOUT = 12
 MAX_BODY = 1_000_000  # 1MB: some Shopify homepages carry 300KB+ of head scripts
 POLITENESS_DELAY = 0.4  # seconds between requests; polite crawling
@@ -33,34 +33,61 @@ NORMAL_UA = ("ChecklaneAuditBot/1.0 (+https://checklane.example/audit; "
              "site-owner-requested readiness audit)")
 
 # AI-agent / AI-crawler user agents, tested against the homepage.
+#
+# HONESTY NOTE (H1): these are crawlers and on-demand fetchers, NOT shoppers.
+# Blocking a training crawler (GPTBot, ClaudeBot) does NOT block AI shopping:
+# browser-driving agents (ChatGPT agent / Operator-class, Meta's Muse, xAI's
+# Grok) buy through normal web checkout, and ChatGPT shopping runs on ACP
+# product feeds. This check measures crawler/fetcher access only.
 AGENT_UAS = {
-    "GPTBot (OpenAI crawler)":
+    # label -> (user-agent string, what-it-is note)
+    "GPTBot (OpenAI training crawler)": (
         "Mozilla/5.0 (compatible; GPTBot/1.2; +https://openai.com/gptbot)",
-    "GoogleOther (Google AI crawling)":
-        "Mozilla/5.0 (compatible; GoogleOther/1.0)",
-    "ClaudeBot (Anthropic)":
-        "Mozilla/5.0 (compatible; ClaudeBot/1.0; +https://anthropic.com)",
-    "CCBot (Common Crawl)":
+        "trains OpenAI models; blocking it does NOT block ChatGPT shopping"),
+    "OAI-SearchBot (ChatGPT search fetcher)": (
+        "Mozilla/5.0 (compatible; OAI-SearchBot/1.0; +https://openai.com/bot.html)",
+        "fetches pages for ChatGPT search answers"),
+    "ClaudeBot (Anthropic training crawler)": (
+        "Mozilla/5.0 (compatible; ClaudeBot/1.0)",
+        "trains Anthropic models; blocking it does NOT block Claude shopping"),
+    "Claude-SearchBot (Claude search fetcher)": (
+        "Mozilla/5.0 (compatible; Claude-SearchBot/1.0)",
+        "fetches pages for Claude search answers"),
+    "CCBot (Common Crawl dataset)": (
         "CCBot/2.0 (https://commoncrawl.org/faq/)",
-    "PerplexityBot":
+        "open-dataset crawl used to train many models"),
+    "PerplexityBot (Perplexity discovery)": (
         "Mozilla/5.0 (compatible; PerplexityBot/1.0; +https://perplexity.ai)",
-    "ChatGPT-User (on-demand agent fetch)":
+        "discovers pages for Perplexity answers"),
+    "ChatGPT-User (ChatGPT on-demand fetch)": (
         "Mozilla/5.0 (compatible; ChatGPT-User/1.0; +https://openai.com/bot.html)",
+        "fetches a page when a ChatGPT user asks about it"),
+    "GoogleOther (Google AI crawling)": (
+        "Mozilla/5.0 (compatible; GoogleOther/1.0)",
+        "Google's AI-feature crawling"),
+    "Google-Agent (Google agentic fetch)": (
+        "Mozilla/5.0 (compatible; Google-Agent/1.0)",
+        "Google's agent-mode fetcher; does NOT honor robots.txt blocking"),
 }
 
 # robots.txt tokens that control AI-crawler access.
+# NOTE: Google-Agent is deliberately absent — it does not honor robots.txt,
+# so claiming a "blocked" posture for it would be false.
 AI_CRAWLER_TOKENS = [
-    "gptbot", "google-extended", "googleother", "claudebot", "ccbot",
+    "gptbot", "oai-searchbot", "google-extended", "googleother",
+    "claudebot", "claude-searchbot", "ccbot",
     "perplexitybot", "chatgpt-user", "anthropic-ai", "cohere-ai",
     "bytespider", "amazonbot",
 ]
 
 # Candidate discovery locations for a UCP capability profile.
+# Canonical FIRST: the UCP spec's discovery path is extensionless
+# /.well-known/ucp. (/.well-known/commerce-capabilities.json appeared
+# invented — dropped per review.)
 UCP_CANDIDATES = [
-    "/.well-known/ucp.json",
     "/.well-known/ucp",
+    "/.well-known/ucp.json",
     "/ucp.json",
-    "/.well-known/commerce-capabilities.json",
 ]
 
 BLOCKED_STATUSES = {401, 403, 407, 429}
@@ -331,21 +358,100 @@ def _parse_ucp_envelope(body):
 
 
 def _ucp_capability_areas(cap_names):
-    """Map UCP capability names (e.g. dev.ucp.shopping.cart) to the five areas."""
+    """Map UCP capability names to the areas the engine scores.
+
+    Uses the spec's REAL capability names (namespace dev.ucp.shopping.*),
+    not invented ones. Unknown names fall back to matching on the final
+    dotted segment, so forward-compatible spec additions still score.
+    """
     areas = set()
     for n in cap_names:
-        nl = str(n).lower()
-        if "catalog.search" in nl or "catalog.lookup" in nl or "discovery" in nl:
-            areas.add("discovery")
-        if ".cart" in nl:
-            areas.add("cart")
-        if "checkout" in nl:
-            areas.add("checkout")
-        if "identity" in nl:
-            areas.add("identity")
-        if ".order" in nl or "fulfillment" in nl:
-            areas.add("order")
+        nl = str(n).strip().lower()
+        if nl in UCP_CAPABILITY_AREAS:
+            areas.add(UCP_CAPABILITY_AREAS[nl])
+            continue
+        seg = nl.rsplit(".", 1)[-1]
+        for full, area in UCP_CAPABILITY_AREAS.items():
+            if full.rsplit(".", 1)[-1] == seg:
+                areas.add(area)
+                break
     return sorted(areas)
+
+
+# UCP capability names per the spec (namespace dev.ucp.shopping.*),
+# mapped to the five areas the engine scores.
+UCP_CAPABILITY_AREAS = {
+    "dev.ucp.shopping.catalog.search": "discovery",
+    "dev.ucp.shopping.catalog.lookup": "discovery",
+    "dev.ucp.shopping.cart": "cart",
+    "dev.ucp.shopping.checkout": "checkout",
+    "dev.ucp.shopping.identity": "identity",
+    "dev.ucp.shopping.identity-linking": "identity",
+    "dev.ucp.shopping.order": "order",
+    "dev.ucp.shopping.fulfillment": "order",
+    "dev.ucp.shopping.post-order": "order",
+}
+
+_URL_KEYS = ("endpoint", "url", "webhook_url", "webhook")
+
+
+def _ucp_endpoint_urls(node):
+    """Collect absolute http(s) URLs declared under endpoint-ish keys.
+
+    Walks the whole UCP profile (services, capabilities, payment_handlers)
+    so a profile can't score full marks while pointing at nothing.
+    """
+    found = []
+
+    def walk(o):
+        if isinstance(o, dict):
+            for k, v in o.items():
+                if (isinstance(k, str) and k.lower() in _URL_KEYS
+                        and isinstance(v, str)):
+                    u = v.strip()
+                    if u.startswith("http://") or u.startswith("https://"):
+                        found.append(u)
+                else:
+                    walk(v)
+        elif isinstance(o, (list, tuple)):
+            for v in o:
+                walk(v)
+
+    walk(node)
+    seen, out = set(), []
+    for u in found:
+        if u not in seen:
+            seen.add(u)
+            out.append(u)
+    return out
+
+
+def _probe_ucp_endpoints(urls, host, limit=6, timeout=5):
+    """Bounded liveness probe of endpoints declared in a UCP profile.
+
+    Only same-host endpoints are probed (off-host entries, e.g. a PSP's
+    webhook, are noted, not scored). Any HTTP response below 500 counts as
+    "answering" — UCP REST endpoints are POST, so a 405 still proves the
+    path is live. Returns [(url, verdict)].
+    """
+    results = []
+    for url in urls[:limit]:
+        try:
+            uh = (urllib.parse.urlsplit(url).hostname or "").lower()
+        except Exception:
+            continue
+        if uh != host.lower():
+            results.append((url, "off-host (not probed)"))
+            continue
+        r = fetch(url, ua=NORMAL_UA, timeout=timeout)
+        polite()
+        if r["status"] is None:
+            results.append((url, "no response (%s)" % (r["error"] or "error")))
+        elif r["status"] < 500:
+            results.append((url, "answered (HTTP %s)" % r["status"]))
+        else:
+            results.append((url, "server error (HTTP %s)" % r["status"]))
+    return results
 
 
 def _page_title(body):
@@ -415,6 +521,43 @@ def _looks_like_challenge(body):
         return None
     low = body[:50_000].lower()
     return next((m for m in CHALLENGE_MARKERS if m in low), None)
+
+
+# Categories that only make sense for an online storefront. When no
+# storefront is detected these are marked N/A and excluded from scoring
+# (H2) — a lead-gen/marketing site should never score F for not selling.
+STOREFRONT_ONLY_CATS = {
+    "AI checkout handshake (UCP + ACP)",
+    "Product info AI can read",
+    "Can AI find your products",
+}
+
+
+def _storefront_signals(parser, product_nodes, ld_nodes, sitemap_info,
+                        feed_found):
+    """Return human-readable storefront signals found on the site."""
+    signals = []
+    for h in parser.links:
+        hl = h.lower()
+        if (re.search(r"/(cart|checkout|basket)(\W|$)", hl)
+                or "add-to-cart" in hl or "add_to_cart" in hl):
+            signals.append("cart/checkout links")
+            break
+    if product_nodes:
+        signals.append("product structured data")
+    for n in ld_nodes:
+        offs = n.get("offers")
+        offs = offs if isinstance(offs, list) else [offs]
+        if any(isinstance(o, dict)
+               and (o.get("price") or o.get("priceSpecification"))
+               for o in offs):
+            signals.append("readable prices")
+            break
+    if sitemap_info.get("product_url_count"):
+        signals.append("product pages in sitemap")
+    if feed_found:
+        signals.append("product feed")
+    return signals
 # --------------------------------------------------------------------------- #
 # Audit
 # --------------------------------------------------------------------------- #
@@ -468,10 +611,17 @@ def audit(domain):
     # ---- discover sitemap early (feeds Cat2 product-page fallback + Cat3) - #
     sitemap_info = _discover_sitemap(base)
 
-    # ============ Category 1: UCP capability profile (20) ================ #
-    cat, cmax = "AI checkout handshake", 20
-    ucp_state = "missing"   # missing | discovery-only | profile-invalid | valid
-    ucp_areas, ucp_url = [], None
+    # ============ Category 1: AI checkout handshake — UCP + ACP (20) ==== #
+    # Covers BOTH protocols, with per-protocol findings:
+    #   UCP (Google): 12 pts — capability profile at /.well-known/ucp
+    #   ACP (OpenAI + Stripe, behind ChatGPT shopping): 8 pts — feed signals
+    # Neither is a prerequisite: browser-driving agents buy through normal
+    # web checkout today. These are the faster, more reliable machine paths —
+    # an optimization, not a gate.
+    cat, cmax = "AI checkout handshake (UCP + ACP)", 20
+    ucp_state = "missing"   # missing | discovery-only | profile-invalid |
+                            # unverified | valid
+    ucp_areas, ucp_url, ucp_probe = [], None, []
     for path in UCP_CANDIDATES:
         r = fetch(base + path, ua=NORMAL_UA)
         polite()
@@ -491,53 +641,105 @@ def audit(domain):
             polite()
             pu = _parse_ucp_envelope(pr["body"]) if pr["status"] == 200 else None
             if pu is not None:
-                caps = pu.get("capabilities")
-                cap_names = (list(caps.keys()) if isinstance(caps, dict)
-                             else list(caps) if isinstance(caps, list) else [])
-                ucp_areas = _ucp_capability_areas(cap_names)
-                ucp_url = prof_url
-                ucp_state = "valid" if len(ucp_areas) >= 3 else "profile-invalid"
-            break
-        # No version map: the doc itself may carry capabilities (non-Shopify impls).
+                u, ucp_url = pu, prof_url
+            else:
+                break
         caps = u.get("capabilities")
-        cap_names = (list(caps.keys()) if isinstance(caps, dict)
-                     else list(caps) if isinstance(caps, list) else [])
+        cap_names = []
+        if isinstance(caps, dict):
+            cap_names = list(caps.keys())
+        elif isinstance(caps, list):
+            for c in caps:
+                if isinstance(c, str):
+                    cap_names.append(c)
+                elif isinstance(c, dict) and isinstance(c.get("name"), str):
+                    cap_names.append(c["name"])
         ucp_areas = _ucp_capability_areas(cap_names)
-        ucp_state = "valid" if len(ucp_areas) >= 3 else "profile-invalid"
+        if len(ucp_areas) >= 3:
+            # Fake-file guard (C2c): a profile only counts if its declared
+            # endpoints actually answer.
+            ucp_probe = _probe_ucp_endpoints(_ucp_endpoint_urls(u), domain)
+            live = [p for p in ucp_probe if p[1].startswith("answered")]
+            ucp_state = "valid" if live else "unverified"
+        else:
+            ucp_state = "profile-invalid"
         break
     if ucp_state == "valid":
-        s = 20
-        checks.append(check("ucp-valid", "AI checkout file found",
-                            "pass", "Found at %s — your store tells AI shoppers "
-                            "it accepts AI checkouts." % ucp_url, None))
+        s = 12
+        checks.append(check("ucp-valid", "UCP checkout file found and verified",
+                            "pass", "Found at %s covering %s — and its declared "
+                            "endpoints answered our probe. This is the fast machine "
+                            "path for UCP-capable agents (e.g. in Google AI Mode / "
+                            "Gemini). Browser-driving agents buy through your normal "
+                            "checkout with or without it."
+                            % (ucp_url, ", ".join(ucp_areas)), None))
+    elif ucp_state == "unverified":
+        s = 7
+        probe_note = ("declared endpoints: " +
+                      "; ".join("%s → %s" % (u_, v) for u_, v in ucp_probe)
+                      if ucp_probe else "no endpoints declared in the profile")
+        checks.append(check("ucp-unverified",
+                            "UCP checkout file declared, UNVERIFIED",
+                            "partial", "Found a profile at %s covering %s — "
+                            "status: declared, unverified. We could not confirm "
+                            "its endpoints work (%s). A static profile "
+                            "pointing at dead endpoints is worse than none: agents "
+                            "that trust it will fail where normal browsing would "
+                            "have worked."
+                            % (ucp_url, ", ".join(ucp_areas), probe_note),
+                            "Make the declared endpoints live, or take the file "
+                            "down until they are. A profile is a promise — only "
+                            "publish what actually answers. (Developer work: "
+                            "working REST endpoints, payment handlers with signing "
+                            "keys, order webhooks.)", "high"))
     elif ucp_state == "discovery-only":
-        s = 10
+        s = 6
         checks.append(check("ucp-discovery-only",
-                            "AI checkout file found, but unverified",
+                            "UCP checkout file found, but unverified",
                             "partial", "There's a file at %s, but we couldn't "
                             "verify it fully." % ucp_url,
-                            "Make sure your AI checkout file loads and spells out "
-                            "what AI shoppers can do: browse, add to cart, check "
-                            "out, and get order help.", "medium"))
+                            "Make sure your UCP profile loads and spells out what "
+                            "agents can do (browse, cart, checkout, order help) — "
+                            "and that the endpoints it names actually answer. "
+                            "Publishing the file is hours; the working backend "
+                            "behind it is days to weeks of engineering.",
+                            "medium"))
     elif ucp_state == "profile-invalid":
-        s = 8
-        checks.append(check("ucp-invalid", "AI checkout file is incomplete",
+        s = 5
+        checks.append(check("ucp-invalid", "UCP checkout file is incomplete",
                             "partial", "Found a file at %s, but it only covers %s — "
-                            "AI shoppers need the full picture."
+                            "agents on the UCP machine path need the full picture."
                             % (ucp_url, ", ".join(ucp_areas) or "nothing"),
-                            "Complete your AI checkout file: cover browsing, cart, "
-                            "checkout, and order help. A half-done file limits what "
-                            "AI shoppers can do with your store.", "high"))
+                            "Complete your UCP profile using the spec's real "
+                            "capability names (`dev.ucp.shopping.*`): catalog "
+                            "search/lookup, cart, checkout, identity, order. And "
+                            "verify every endpoint it declares actually answers — "
+                            "a half-done file limits what agents can do with your "
+                            "store.", "high"))
     else:
         s = 0
-        checks.append(check("ucp-missing", "No AI checkout file found",
-                            "fail", "We checked the usual spots (%s) — nothing there."
-                            % ", ".join(UCP_CANDIDATES),
-                            "Add a small file at /.well-known/ucp.json explaining how "
-                            "AI shoppers can buy from you. Without it, AI shoppers "
-                            "can't tell you accept AI checkouts. (On Shopify? Their "
-                            "AI tools can create this for you.)", "high"))
-    scores[cat] = (s, cmax)
+        checks.append(check("ucp-missing", "No UCP checkout file found",
+                            "fail", "We checked the standard discovery paths "
+                            "(starting with the canonical `/.well-known/ucp`) — "
+                            "nothing there. Note: this is the faster machine path "
+                            "for UCP-capable agents, not a prerequisite — "
+                            "browser-driving agents buy through normal checkout "
+                            "today.",
+                            "Publish your UCP capability profile at `/.well-known/ucp` "
+                            "(extensionless — the canonical discovery path in the "
+                            "UCP spec; `/.well-known/ucp.json` also works as a "
+                            "fallback). Be honest about the work: the file itself "
+                            "is hours, but a REAL UCP implementation — working "
+                            "REST endpoints, payment handlers with signing keys, "
+                            "order webhooks — is days to weeks of backend "
+                            "engineering. A static JSON pointing at dead endpoints "
+                            "is worse than none. Platform shortcuts: on Shopify, "
+                            "turn on Shopify's Agentic sales channel / AI tools — "
+                            "they publish the manifest for you (fast path). On a "
+                            "custom build, scope it as a backend project "
+                            "(days–weeks), not an afternoon task.", "high"))
+    scores[cat] = (s, 12)
+    CAT1 = cat  # ACP checks (below, after product sampling) add to this bucket
 
     # ============ Category 2: Structured product data (20) =============== #
     cat, cmax = "Product info AI can read", 20
@@ -634,6 +836,94 @@ def audit(domain):
                             "legit.", "low"))
     scores[cat] = (min(s, cmax), cmax)
 
+    # ---- Category 1 (continued): ACP feed-eligibility signals (8) ------- #
+    # ACP (Agentic Commerce Protocol, OpenAI + Stripe) powers ChatGPT
+    # shopping. There is NO on-site discovery file for ACP: merchant
+    # eligibility is a product-feed upload + OpenAI partner onboarding, both
+    # handled off-site. What a remote audit CAN verify are the signals that
+    # make a catalog feed-eligible: product identifiers and policy URLs.
+    acp_s = 0
+    id_fields = set()
+    for _n in product_nodes:
+        for _f in ("gtin", "gtin8", "gtin13", "gtin14", "mpn", "sku"):
+            if _n.get(_f):
+                id_fields.add(_f)
+    _strong_ids = id_fields & {"gtin", "gtin8", "gtin13", "gtin14", "mpn"}
+    if _strong_ids:
+        acp_s += 4
+        checks.append(check("acp-feed-signals",
+                            "ChatGPT feed signals: product IDs",
+                            "pass", "Your product labels include %s — the "
+                            "identifier fields ChatGPT's product feed (ACP) keys "
+                            "on." % ", ".join(sorted(id_fields)), None))
+    elif "sku" in id_fields:
+        acp_s += 2
+        checks.append(check("acp-feed-signals",
+                            "ChatGPT feed signals: product IDs",
+                            "partial", "You label SKUs, but no GTIN/MPN. ChatGPT's "
+                            "feed spec keys on GTINs — SKUs alone weaken matching.",
+                            "Add GTIN/MPN to your product labels wherever your "
+                            "products have barcodes or manufacturer part numbers. "
+                            "It's the field ChatGPT's product feed matches on.",
+                            "medium"))
+    elif product_nodes:
+        checks.append(check("acp-feed-signals",
+                            "ChatGPT feed signals: product IDs",
+                            "fail", "Your products are labeled, but none carry a "
+                            "GTIN, MPN, or SKU that a product feed could key on.",
+                            "Add product identifiers (GTIN/MPN/SKU) to your product "
+                            "labels. ChatGPT's feed spec keys on GTINs — without "
+                            "identifiers your catalog is hard to match.",
+                            "medium"))
+    else:
+        checks.append(check("acp-feed-signals",
+                            "ChatGPT feed signals: product IDs",
+                            "fail", "No product labels found, so no product IDs "
+                            "either.",
+                            "Without product labels there is nothing for ChatGPT's "
+                            "product feed to key on. Label your products first "
+                            "(see 'Products are labeled' above), including "
+                            "GTIN/MPN where your products have barcodes.",
+                            "medium"))
+    _ship_links = [h for h in parser.links if "ship" in h.lower()]
+    _ret_links = [h for h in parser.links
+                  if any(k in h.lower() for k in ("return", "refund"))]
+    if _ship_links and _ret_links:
+        acp_s += 4
+        checks.append(check("acp-policies", "ChatGPT feed signals: policy pages",
+                            "pass", "Found shipping and returns/refund policy "
+                            "links — the policy signals ChatGPT's feed expects.",
+                            None))
+    elif _ship_links or _ret_links:
+        acp_s += 2
+        _which = "shipping" if _ship_links else "returns/refund"
+        checks.append(check("acp-policies", "ChatGPT feed signals: policy pages",
+                            "partial", "Found %s policy links, but not both "
+                            "shipping and returns." % _which,
+                            "Publish both a shipping policy and a returns/refund "
+                            "policy page, linked from your homepage. ChatGPT's "
+                            "product feed requires shipping info per item, and "
+                            "buyers — human or agent — expect policy pages.",
+                            "medium"))
+    else:
+        checks.append(check("acp-policies", "ChatGPT feed signals: policy pages",
+                            "fail", "No shipping or returns/refund policy links "
+                            "found on your homepage.",
+                            "Publish a shipping policy page and a returns/refund "
+                            "policy page, linked from your homepage. ChatGPT's "
+                            "product feed requires shipping info per item. "
+                            "ChatGPT-side path (ACP): there is no on-site file — "
+                            "eligibility is a product feed upload plus OpenAI "
+                            "partner onboarding, handled off-site. Apply via "
+                            "OpenAI's merchant onboarding and publish your "
+                            "catalog per OpenAI's Product Feed Spec (id, title, "
+                            "price, availability, link, image, brand, GTIN, "
+                            "shipping). On Shopify or Etsy you're auto-enrolled — "
+                            "nothing to apply for. This audit can't confirm your "
+                            "onboarding status; only OpenAI can.", "medium"))
+    _s1, _ = scores[CAT1]
+    scores[CAT1] = (_s1 + acp_s, 20)
+
     # ============ Category 3: Feed discoverability (20) ================== #
     cat, cmax = "Can AI find your products", 20
     s = 0
@@ -696,27 +986,49 @@ def audit(domain):
                             "automatically; others can use a Google-Shopping-style "
                             "feed). If AI can't list your catalog, it can't sell it.",
                             "high"))
-    # Agent instructions file (agents.md — the agent-web's robots.txt)
-    am = fetch(base + "/agents.md", ua=NORMAL_UA)
-    polite()
-    if am["status"] == 200 and len(am["body"]) > 200 and \
-            "agent" in am["body"][:2000].lower():
+    # Agent instructions file: /llms.txt (the established LLM-discovery
+    # convention) and/or /agents.md. NOT repo-root AGENTS.md — that's a
+    # separate coding-agent convention for software projects, not websites.
+    welcome_found = None
+    for _wpath in ("/llms.txt", "/agents.md"):
+        _wr = fetch(base + _wpath, ua=NORMAL_UA)
+        polite()
+        if (_wr["status"] == 200 and len(_wr["body"]) > 200
+                and "agent" in _wr["body"][:2000].lower()):
+            welcome_found = (_wpath, len(_wr["body"]))
+            break
+    if welcome_found:
         s += 2
         checks.append(check("agents-md", "AI welcome note found",
-                            "pass", "Found your /agents.md (%d bytes) — your store "
-                            "talks to AI shoppers directly." % len(am["body"]), None))
+                            "pass", "Found your %s (%d bytes) — your site talks "
+                            "to AI visitors directly." % welcome_found, None))
     else:
         checks.append(check("agents-md", "No AI welcome note",
-                            "fail", "No /agents.md file found.",
-                            "Write a short /agents.md file: what you sell, how to "
-                            "browse your catalog, shipping basics, and how to reach "
-                            "you. Think of it as the welcome sign AI reads first.",
-                            "medium"))
+                            "fail", "No /llms.txt or /agents.md file found.",
+                            "Publish an /llms.txt file — the established "
+                            "convention LLM tools actually read — and/or an "
+                            "/agents.md as your agent welcome file: what you "
+                            "sell, how to browse your catalog, shipping basics, "
+                            "and how to reach you. (A repo-root AGENTS.md is a "
+                            "different thing — a coding-agent convention for "
+                            "software projects, not websites.)", "medium"))
     scores[cat] = (min(s, cmax), cmax)
 
-    # ============ Category 4: Bot-wall / agent blockers (20) ============= #
-    cat, cmax = "Are AI shoppers blocked", 20
+    # ============ Category 4: AI bot access (20) ========================= #
+    # WHAT THIS ACTUALLY MEASURES (H1): whether known AI crawlers and
+    # on-demand fetchers can load the homepage. It does NOT measure whether
+    # "AI shoppers" are blocked — blocking a training crawler does not block
+    # AI shopping. Browser-driving agents buy through normal web checkout,
+    # and ChatGPT shopping runs on ACP product feeds.
+    cat, cmax = "AI bot access", 20
     s = 0
+    checks.append(check("bot-test-scope", "What this test measures",
+                        "pass", "This checks whether known AI crawlers and "
+                        "on-demand fetchers can load your homepage — not whether "
+                        "\"AI shoppers\" are blocked. Blocking training crawlers "
+                        "(GPTBot, ClaudeBot) does NOT block AI shopping: "
+                        "browser-driving agents buy through normal checkout, and "
+                        "ChatGPT shopping runs on product feeds.", None))
     base_title = _page_title(home["body"]).lower()
     base_len = len(home["body"])
     # Sanity: is the baseline itself a challenge page?
@@ -727,11 +1039,13 @@ def audit(domain):
                             "mentioning %r — your site challenges automated "
                             "readers." % base_challenge,
                             "Your security challenges automated readers before they "
-                            "see any content. AI shoppers read pages the same way "
-                            "this test does — let known AI shoppers through, or "
-                            "they'll never see your products.", "high"))
+                            "see any content. AI crawlers and fetchers read pages "
+                            "the same way this test does — let the discovery "
+                            "fetchers (OAI-SearchBot, Claude-SearchBot, "
+                            "PerplexityBot, ChatGPT-User) through, or they can't "
+                            "include your pages in AI answers.", "high"))
     per_ua = round(cmax / len(AGENT_UAS), 2)
-    for label, ua in AGENT_UAS.items():
+    for label, (ua, role) in AGENT_UAS.items():
         r = fetch(base + "/", ua=ua)
         polite()
         blocked, reason = False, ""
@@ -754,22 +1068,29 @@ def audit(domain):
                           _page_title(r["body"])[:60])
         if blocked:
             checks.append(check("agent-ua:" + label, "AI visitor: " + label,
-                                "fail", "Couldn't load your store: %s." % reason,
-                                "Your site blocks %s. AI shoppers read pages the way "
-                                "this test does — a block here means they can't see "
-                                "your products at all. Let known AI shoppers through, "
-                                "or switch to bot rules that exempt them." % label,
-                                "high"))
+                                "fail", "Couldn't load your store: %s. (%s.)"
+                                % (reason, role),
+                                "Your site blocked %s. %s. This test fetches like "
+                                "an automated AI visitor — a block here means that "
+                                "particular crawler/fetcher can't read your pages. "
+                                "What it does NOT mean: that AI shopping is "
+                                "blocked. If the block is deliberate (e.g. keeping "
+                                "training crawlers out), fine — but make sure the "
+                                "discovery fetchers stay allowed, or AI answers "
+                                "can't cite you." % (label, role), "high"))
         else:
             s += per_ua
             checks.append(check("agent-ua:" + label, "AI visitor: " + label,
                                 "pass", "Loaded fine — sees the same page a person "
-                                "does.", None))
+                                "does. (%s.)" % role, None))
     s = min(round(s), cmax)
     if s == cmax:
-        checks.append(check("agent-access-summary", "Overall AI access",
-                            "pass", "All %d tested AI shoppers can read your "
-                            "homepage." % len(AGENT_UAS), None))
+        checks.append(check("agent-access-summary", "Overall AI bot access",
+                            "pass", "All %d tested AI crawlers and fetchers can "
+                            "read your homepage. Note: browser-driving shopping "
+                            "agents were never blocked by crawler rules in the "
+                            "first place — they buy through normal checkout."
+                            % len(AGENT_UAS), None))
     scores[cat] = (s, cmax)
 
     # ============ Category 5: Machine-readability basics (20) ============= #
@@ -781,9 +1102,11 @@ def audit(domain):
                             "fail", "Your site rules tell these AI visitors to stay "
                             "out: %s." % ", ".join(blocked_tokens),
                             "Your robots.txt blocks AI visitors (%s). If that's "
-                            "deliberate, fine — but it makes your store invisible to "
-                            "AI shoppers by design. If those lines came from a "
-                            "template, delete them."
+                            "deliberate (e.g. keeping training crawlers out of "
+                            "your content), fine — blocking them does not block "
+                            "AI shopping. But a blanket block also keeps you out "
+                            "of AI search answers and product discovery. If those "
+                            "lines came from a template, delete them."
                             % ", ".join(blocked_tokens), "high"))
     else:
         s += 8
@@ -808,8 +1131,11 @@ def audit(domain):
                             "JavaScript to appear." % (visible_len,
                                                        parser.script_srcs),
                             "Put key content (titles, prices, descriptions) directly "
-                            "in the page, not behind JavaScript. AI reads the raw "
-                            "page — JavaScript-only content is invisible to it.",
+                            "in the page, not behind JavaScript. AI fetchers read "
+                            "the raw page first — content that only appears after "
+                            "JavaScript runs is missed by simpler readers. "
+                            "(Agent-mode shoppers drive real browsers, so this is "
+                            "about robustness, not a hard block.)",
                             "high"))
     else:
         s += 6
@@ -846,19 +1172,35 @@ def audit(domain):
                             "catalog." % prod_links, None))
     scores[cat] = (min(s, cmax), cmax)
 
+    # ---------------- site-type detection (H2) --------------------------- #
+    sf_signals = _storefront_signals(parser, product_nodes, ld_nodes,
+                                     sitemap_info, feed_found)
+    site_type = "storefront" if len(sf_signals) >= 2 else "non-storefront"
+
     # ---------------- assemble report ------------------------------------ #
-    total = sum(v[0] for v in scores.values())
-    total_max = sum(v[1] for v in scores.values())
+    categories = []
+    for name, (earned, cmax_) in scores.items():
+        na = site_type == "non-storefront" and name in STOREFRONT_ONLY_CATS
+        cat_checks = [c for c in checks if c["id"].split(":")[0] in
+                      _cat_check_ids(name)]
+        categories.append({"name": name,
+                           "score": 0 if na else earned,
+                           "max": 0 if na else cmax_,
+                           "checks": cat_checks,
+                           "na": na})
+    na_ids = set()
+    for _c in categories:
+        if _c.get("na"):
+            na_ids.update(x["id"] for x in _c["checks"])
+    total = sum(c["score"] for c in categories)
+    total_max = sum(c["max"] for c in categories)
     score = round(100 * total / total_max) if total_max else 0
     grade = ("A" if score >= 85 else "B" if score >= 70 else "C"
              if score >= 55 else "D" if score >= 40 else "F")
-    categories = []
-    for name, (earned, cmax_) in scores.items():
-        cat_checks = [c for c in checks if c["id"].split(":")[0] in
-                      _cat_check_ids(name)]
-        categories.append({"name": name, "score": earned, "max": cmax_,
-                           "checks": cat_checks})
-    fixes = [c for c in checks if c["status"] in ("fail", "partial") and c["fix"]]
+    # §3 guarantee: EVERY check with a fix is ranked — nothing skipped.
+    fixes = [c for c in checks
+             if c["status"] in ("fail", "partial") and c["fix"]
+             and c["id"] not in na_ids]
     sev_rank = {"high": 0, "medium": 1, "low": 2}
     fixes.sort(key=lambda c: (sev_rank.get(c["severity"], 3), c["name"]))
     return {
@@ -866,8 +1208,10 @@ def audit(domain):
         "score": score,
         "grade": grade,
         "summary": _summary(score, grade),
+        "site_type": site_type,
+        "site_type_signals": sf_signals,
         "categories": categories,
-        "fixes": [{"check": f["name"], "severity": f["severity"],
+        "fixes": [{"id": f["id"], "check": f["name"], "severity": f["severity"],
                    "detail": f["detail"], "fix": f["fix"]} for f in fixes],
         "fetched_at": int(time.time()),
         "duration_s": round(time.time() - started, 1),
@@ -877,13 +1221,15 @@ def audit(domain):
 
 def _cat_check_ids(cat_name):
     return {
-        "AI checkout handshake": {"ucp-valid", "ucp-discovery-only",
-                                   "ucp-invalid", "ucp-missing"},
+        "AI checkout handshake (UCP + ACP)": {
+            "ucp-valid", "ucp-unverified", "ucp-discovery-only",
+            "ucp-invalid", "ucp-missing",
+            "acp-feed-signals", "acp-policies"},
         "Product info AI can read": {"jsonld-present", "product-markup",
                                     "product-completeness", "offers-present",
                                     "org-markup"},
-        "Can AI find your products": {"sitemap", "product-feed"},
-        "Are AI shoppers blocked": {"agent-ua", "agent-access-summary"},
+        "Can AI find your products": {"sitemap", "product-feed", "agents-md"},
+        "AI bot access": {"bot-test-scope", "agent-ua", "agent-access-summary"},
         "Can AI read your pages": {"robots-ai", "static-content",
                                        "html-basics", "product-links"},
     }.get(cat_name, set())
@@ -892,19 +1238,23 @@ def _cat_check_ids(cat_name):
 def _summary(score, grade):
     if score >= 85:
         return ("Excellent — your store speaks AI's language. The key signals AI "
-                "shoppers need are all here; what's left is polish.")
+                "agents need are all here; what's left is polish.")
     if score >= 70:
-        return ("Nearly there. A few gaps keep some AI shoppers from fully reading "
-                "or buying from your store — the fix list closes them.")
+        return ("Nearly there. A few gaps keep some AI agents from fully reading "
+                "or transacting with your store — the fix list closes them.")
     if score >= 55:
         return ("Halfway. AI can probably find you, but it'll struggle to read "
-                "your catalog or trust your products. Start with the high-priority "
-                "fixes.")
+                "your catalog or use the fast machine paths. Start with the "
+                "high-priority fixes.")
     if score >= 40:
-        return ("Needs work. Your store is mostly invisible to AI shoppers right "
-                "now. The fix list is your roadmap.")
-    return ("Not ready yet. AI shoppers effectively can't find, read, or buy from "
-            "your store today. Start at the top of the fix list.")
+        return ("Needs work. AI agents will struggle with the machine-readable "
+                "layer of your store — browser-based agents can still buy through "
+                "normal checkout, but slowly, and you're hard to compare. The fix "
+                "list is your roadmap.")
+    return ("Not ready yet. The fast machine paths (UCP/ACP) are missing and the "
+            "basics are thin — browser-driving agents can still reach you through "
+            "normal checkout, but you're hard to compare and slow to transact "
+            "with. Start at the top of the fix list.")
 
 
 def main():

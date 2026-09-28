@@ -36,9 +36,15 @@
     return '<div class="gate"><h3>Get the full report</h3>' +
       "<p>Your score is free. The full report has every check and every fix, " +
       "ranked by what matters most for <strong>" + esc(domain) + "</strong>.</p>" +
+      '<div class="peek"><p class="peek-cap">A peek inside the report:</p>' +
+      '<ul class="fix-preview"><li><span class="sev sev-high">High</span> Add structured product data <span class="redact">████████████</span></li>' +
+      '<li><span class="sev sev-medium">Medium</span> Publish your sitemap <span class="redact">████████</span></li>' +
+      '<li><span class="sev sev-low">Low</span> Fix canonical links <span class="redact">██████</span></li></ul>' +
+      '<p class="micro">The full report names every check and ranks every fix.</p></div>' +
       '<button type="button" class="btn btn-large" id="buy-btn">Buy the full report &mdash; ' +
       esc(PRICE_DISPLAY) + "</button>" +
-      '<p class="micro">Secure payment via Stripe. Your report unlocks instantly.</p>' +
+      '<p class="micro">Secure payment via Stripe. Your report opens right after payment, and a receipt with the report link is emailed to you &mdash; if you close the tab, use the email link or the &ldquo;lost your report?&rdquo; link below. 7-day satisfaction guarantee: not happy? Full refund, no questions asked. <a href="/refund">Read the guarantee</a>.</p>' +
+      '<p class="micro">Lost your report? <a href="/lost-report">Get it re-sent</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/refund">Refund policy</a></p>' +
       '<div class="field-err" id="buy-err"></div></div>';
   }
 
@@ -76,7 +82,7 @@
     "Opening your homepage\u2026",
     "Checking your sitemap and site rules\u2026",
     "Reading your product info\u2026",
-    "Visiting as six AI shoppers\u2026",
+    "Visiting as nine AI crawlers and fetchers\u2026",
     "Seeing if AI can read your pages\u2026",
     "Building your fix list\u2026"
   ];
@@ -301,7 +307,7 @@
       window.location = "/report?session_id=" + encodeURIComponent(sessionId);
     }
 
-    // Anonymized sample report (static JSON, rendered read-only, score only).
+    // Illustrative sample report (synthetic JSON, rendered read-only, score only).
     fetch("/sample-report").then(function (r) { return r.json(); }).then(function (rep) {
       $("sample-report").innerHTML = scoreCard(rep, true);
     }).catch(function () {
