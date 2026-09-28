@@ -785,7 +785,9 @@ def render_report(report):
   </main>
   <footer>
     Scoring updated Sep 2026: we now grade AI discoverability too, so this score
-    isn't directly comparable to audits run before then.
+    isn't directly comparable to audits run before then.<br>
+    Scores and recommendations are a technical reading, not a promise of sales
+    or AI recommendations. <a href="https://getchecklane.com/terms" style="color:inherit">See Terms</a>.
   </footer>
 </div>
 </body>
