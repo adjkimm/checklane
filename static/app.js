@@ -125,9 +125,22 @@
     clearInterval(statusTimer);
     statusTimer = setInterval(function () { i++; setStatus(i); }, 4000);
 
-    fetch("/api/audit?domain=" + encodeURIComponent(domain))
-      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+    var attempts = 0;
+    function attempt() {
+      attempts++;
+      fetch("/api/audit?domain=" + encodeURIComponent(domain))
+      .then(function (r) {
+        if (r.status === 429 && attempts < 2) {
+          // Audit servers are busy: hold the user's place and retry once
+          // automatically instead of showing a dead-end error.
+          statusEl.textContent = "Many sites being checked right now \u2014 retrying automatically\u2026";
+          setTimeout(attempt, 12000);
+          return null;
+        }
+        return r.json().then(function (j) { return { ok: r.ok, j: j }; });
+      })
       .then(function (res) {
+        if (res === null) return; // retry scheduled above
         clearInterval(statusTimer);
         statusEl.hidden = true;
         if (!res.ok || res.j.error) {
@@ -151,6 +164,8 @@
         resultEl.innerHTML = '<div class="err"><strong>Couldn\u2019t check your site:</strong> ' +
           esc(String(err)) + "</div>";
       });
+    }
+    attempt();
   }
 
   function wireBuyButton() {

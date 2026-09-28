@@ -163,9 +163,11 @@ def _rate_limit_ok(ip, key="api", per_minute=10.0, burst=20):
         return True, 0
 
 
-# --- Audit concurrency cap (H5): max 2 concurrent audits ------------------ #
-# A 429 with Retry-After beats an exhausted free tier.
-AUDIT_SEM = threading.Semaphore(2)
+# --- Audit concurrency cap (H5): max 4 concurrent audits ------------------ #
+# A 429 with Retry-After beats an exhausted box. Audits are network-bound
+# (fetching the target site, not local CPU), so 4 concurrent fits the
+# Starter plan's memory. The frontend auto-retries once on 429.
+AUDIT_SEM = threading.Semaphore(4)
 AUDIT_BUSY_RETRY_AFTER = "30"
 
 # In-memory hot cache: report_token -> (full report dict, timestamp).
