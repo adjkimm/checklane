@@ -178,32 +178,38 @@
       <h2>See your site the way AI shoppers see it</h2>
       <p class="section-sub">AI agents are about to start shopping for your customers, and they will buy from the sites they can read best. The $9 report shows you exactly where you stand and what to fix, finding by finding, so you are ready before your competitors are.</p>
       <div class="report-card">
-        <p style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#5b6b7c;margin:0 0 8px;">Example finding, one of several in a real report</p>
+        <p style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#5b6b7c;margin:0 0 8px;">Real finding, from a $9 report on getchecklane.com</p>
         <div style="background:#fff;border:1px solid #e2e9f0;border-radius:12px;padding:16px 18px;margin:0 0 20px;">
-          <p style="margin:0 0 4px;font-size:13px;color:#5b6b7c;">Category: <strong style="color:#16202b;">Can AI find your business</strong></p>
-          <p style="margin:0 0 10px;"><span style="display:inline-block;font-size:12px;color:#5b6b7c;background:#f1f5f9;border:1px solid #e2e9f0;border-radius:999px;padding:2px 10px;margin-right:8px;">Medium priority</span><strong>No AI welcome file</strong></p>
-          <p style="margin:0 0 8px;"><strong>What it means:</strong> AI shopping agents look for a short, plain-text file on your site that says what your business does, who it&rsquo;s for, and how to reach you. Without it, they have to guess. Guessing is where you lose the sale.</p>
+          <p style="margin:0 0 4px;font-size:13px;color:#5b6b7c;">Category: <strong style="color:#16202b;">AI checkout handshake (UCP + ACP): 2/20</strong></p>
+          <p style="margin:0 0 10px;"><span style="display:inline-block;font-size:12px;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;border-radius:999px;padding:2px 10px;margin-right:8px;">Real gap</span><strong>No UCP checkout file found</strong></p>
+          <p style="margin:0 0 8px;"><strong>What it means:</strong> We checked the standard discovery paths (starting with the canonical /.well-known/ucp). Nothing there. Note: this is the faster machine path for UCP-capable agents, not a prerequisite. Browser-driving agents buy through normal checkout today.</p>
           <p style="margin:0 0 4px;"><strong>How to fix it:</strong></p>
-          <ol style="margin:4px 0 10px 20px;padding:0;">
-            <li style="margin-bottom:6px;">Create a plain-text file at <code>yoursite.com/llms.txt</code>.</li>
-            <li style="margin-bottom:6px;">In a few hundred words, cover what you do, who it&rsquo;s for, your key pages, and how to reach you. Include a short section addressed directly to AI agents.</li>
-            <li style="margin-bottom:6px;">Publish it, then re-run the free audit to confirm it&rsquo;s picked up.</li>
-          </ol>
-          <p class="micro" style="margin:0;">Owner: DIY, no developer needed &middot; Effort: about 1 hour</p>
+          <div style="position:relative;">
+            <div style="filter:blur(5px);user-select:none;pointer-events:none;" aria-hidden="true">
+              <ol style="margin:4px 0 10px 20px;padding:0;">
+                <li style="margin-bottom:6px;">Publish your UCP capability profile at /.well-known/ucp (extensionless: the canonical discovery path in the UCP spec; /.well-known/ucp.json also works as a fallback). Be honest about the work: the file itself is hours, but a real UCP implementation (working REST endpoints, payment handlers with signing keys, order webhooks) is days to weeks of backend engineering. A static JSON pointing at dead endpoints is worse than none. Platform shortcuts: on Shopify, turn on Shopify&rsquo;s Agentic sales channel / AI tools. They publish the manifest for you (fast path). On a custom build, scope it as a backend project (days to weeks), not an afternoon task.</li>
+              </ol>
+            </div>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">
+              <a href="#audit" style="display:inline-block;background:#16202b;color:#fff;font-size:14px;font-weight:600;padding:10px 20px;border-radius:999px;text-decoration:none;">Unlock the full fix for $9</a>
+              <span style="font-size:12px;color:#5b6b7c;">The fix steps unlock with the full report.</span>
+            </div>
+          </div>
+          <p class="micro" style="margin:10px 0 0;">Owner: Developer (DIY on Shopify) &middot; Effort: days to weeks</p>
         </div>
-        <p style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#5b6b7c;margin:0 0 8px;">Example action plan</p>
+        <p style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#5b6b7c;margin:0 0 8px;">Action plan, from the same report</p>
         <div style="background:#fff;border:1px solid #e2e9f0;border-radius:12px;padding:16px 18px;margin:0 0 20px;">
           <p style="margin:0 0 8px;"><strong>Phase 1: highest leverage</strong></p>
           <div style="overflow-x:auto;">
           <table style="width:100%;min-width:430px;border-collapse:collapse;font-size:14px;">
             <tr><th style="text-align:left;padding:8px 8px 8px 0;border-bottom:1px solid #eef2f6;color:#5b6b7c;font-weight:600;">#</th><th style="text-align:left;padding:8px;border-bottom:1px solid #eef2f6;color:#5b6b7c;font-weight:600;">Fix</th><th style="text-align:left;padding:8px;border-bottom:1px solid #eef2f6;color:#5b6b7c;font-weight:600;">Who</th><th style="text-align:left;padding:8px;border-bottom:1px solid #eef2f6;color:#5b6b7c;font-weight:600;">Effort</th></tr>
-            <tr><td style="padding:10px 8px 10px 0;border-bottom:1px solid #eef2f6;vertical-align:top;">1</td><td style="padding:10px 8px;border-bottom:1px solid #eef2f6;vertical-align:top;"><strong>Publish your AI welcome file</strong><br><span style="font-size:13px;color:#5b6b7c;">What you do, who it&rsquo;s for, key pages, contact.</span></td><td style="padding:10px 8px;border-bottom:1px solid #eef2f6;vertical-align:top;">DIY</td><td style="padding:10px 8px;border-bottom:1px solid #eef2f6;vertical-align:top;">1 hr</td></tr>
-            <tr><td style="padding:10px 8px 10px 0;vertical-align:top;">2</td><td style="padding:10px 8px;vertical-align:top;"><strong>Label your business identity</strong><br><span style="font-size:13px;color:#5b6b7c;">Business name, web address, and logo in labeled format.</span></td><td style="padding:10px 8px;vertical-align:top;">DIY</td><td style="padding:10px 8px;vertical-align:top;">30 min</td></tr>
+            <tr><td style="padding:10px 8px 10px 0;border-bottom:1px solid #eef2f6;vertical-align:top;">1</td><td style="padding:10px 8px;border-bottom:1px solid #eef2f6;vertical-align:top;"><strong>Publish your UCP checkout file</strong><br><span style="font-size:13px;color:#5b6b7c;">The machine path for UCP-capable agents. Scoped honestly: days to weeks.</span></td><td style="padding:10px 8px;border-bottom:1px solid #eef2f6;vertical-align:top;">Developer</td><td style="padding:10px 8px;border-bottom:1px solid #eef2f6;vertical-align:top;">Days&ndash;weeks</td></tr>
+            <tr><td style="padding:10px 8px 10px 0;vertical-align:top;color:#5b6b7c;">&hellip;</td><td colspan="3" style="padding:10px 8px;vertical-align:top;color:#5b6b7c;font-size:13px;">every other finding the audit turns up, phased by impact</td></tr>
           </table>
           </div>
           <p class="micro" style="margin:10px 0 0;">The full plan phases every finding by impact: highest leverage first, then this month, then ongoing. Nothing skipped.</p>
         </div>
-        <p class="micro">Illustrated example, not a real customer&rsquo;s report. Yours is generated from your own site&rsquo;s audit.</p>
+        <p class="micro">Real excerpt from a $9 report run on getchecklane.com. Yours is generated from your own site&rsquo;s audit.</p>
         <p class="micro">Every paid report closes with this: &ldquo;Checklane grades
           what&rsquo;s technically verifiable about your site at audit time. This
           report is a roadmap, not a promise. A high score means nothing
