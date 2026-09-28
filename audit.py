@@ -1028,7 +1028,10 @@ def audit(domain):
                         "\"AI shoppers\" are blocked. Blocking training crawlers "
                         "(GPTBot, ClaudeBot) does NOT block AI shopping: "
                         "browser-driving agents buy through normal checkout, and "
-                        "ChatGPT shopping runs on product feeds.", None))
+                        "ChatGPT shopping runs on product feeds. On storefronts "
+                        "we also probe up to two cart/checkout pages you link "
+                        "to, since some sites challenge bots there but not on "
+                        "the homepage.", None))
     base_title = _page_title(home["body"]).lower()
     base_len = len(home["body"])
     # Sanity: is the baseline itself a challenge page?
@@ -1083,6 +1086,62 @@ def audit(domain):
             checks.append(check("agent-ua:" + label, "AI visitor: " + label,
                                 "pass", "Loaded fine — sees the same page a person "
                                 "does. (%s.)" % role, None))
+    # ---- cart/checkout path probes (Board condition 4) ------------------ #
+    # Homepage-only probing misses sites that let crawlers read marketing
+    # pages but challenge them at /cart or /checkout. For storefronts,
+    # probe up to two discovered same-host cart/checkout URLs with a small
+    # set of discovery fetchers. Informational checks (medium severity);
+    # scoring stays on the homepage probes so one weird path can't tank
+    # the category.
+    _CART_PATH_RE = re.compile(r"/(cart|checkout|basket)(\W|$)", re.I)
+    cart_urls = []
+    for h in parser.links:
+        hl = (h or "").strip()
+        if not hl or hl.startswith(("#", "javascript:", "mailto:", "tel:")):
+            continue
+        lhl = hl.lower()
+        if "add-to-cart" in lhl or "add_to_cart" in lhl \
+                or _CART_PATH_RE.search(hl):
+            absu = urllib.parse.urljoin(base + "/", hl)
+            if urllib.parse.urlsplit(absu).netloc.lower() == domain.lower() \
+                    and absu not in cart_urls:
+                cart_urls.append(absu)
+        if len(cart_urls) >= 2:
+            break
+    _PROBE_UAS = ["OAI-SearchBot (ChatGPT search fetcher)",
+                  "PerplexityBot (Perplexity discovery)"]
+    for curl in cart_urls:
+        for label in _PROBE_UAS:
+            ua, _role = AGENT_UAS[label]
+            r = fetch(curl, ua=ua)
+            polite()
+            blocked, reason = False, ""
+            if r["status"] is None:
+                blocked, reason = True, "request failed (%s)" % r["error"]
+            elif r["status"] in BLOCKED_STATUSES or r["status"] >= 400:
+                blocked, reason = True, "HTTP %s" % r["status"]
+            elif _looks_like_challenge(r["body"]):
+                blocked, reason = True, "challenge page"
+            path_disp = urllib.parse.urlsplit(curl).path or "/"
+            short_label = label.split(" (")[0]
+            cid = "agent-ua:cart-path:%s:%s" % (short_label, path_disp)
+            if blocked:
+                checks.append(check(
+                    cid, "AI visitor at %s: %s" % (path_disp, short_label),
+                    "fail",
+                    "Couldn't load %s as %s: %s. AI assistants that fetch "
+                    "pages on a shopper's behalf may hit the same wall at "
+                    "checkout." % (path_disp, short_label, reason),
+                    "Your site blocked %s at %s (%s). Anti-bot protection "
+                    "on checkout is often deliberate and reasonable — but "
+                    "know that AI assistants which fetch pages for shoppers "
+                    "may be affected too. If the block wasn't intentional, "
+                    "let the discovery fetchers through."
+                    % (short_label, path_disp, reason), "medium"))
+            else:
+                checks.append(check(
+                    cid, "AI visitor at %s: %s" % (path_disp, short_label),
+                    "pass", "Loaded fine as %s." % short_label, None))
     s = min(round(s), cmax)
     if s == cmax:
         checks.append(check("agent-access-summary", "Overall AI bot access",

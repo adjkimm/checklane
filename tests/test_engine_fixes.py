@@ -344,6 +344,66 @@ check("N/A note rendered", "Not scored — no storefront" in html2)
 check("site-type note in brief", "doesn&#x27;t sell products online" in html2
       or "doesn't sell products online" in html2)
 
+# ------------------------------------------------- 5e. cart/checkout path probes
+print("== cart/checkout path probes (Board condition 4) ==")
+audit.normalize_domain = lambda d: d  # re-apply: section 5 restored the guard
+audit.polite = lambda: None
+
+
+def make_cart_fetch(block_cart=False):
+    cart_home = HOME.replace('<a href="/shipping">shipping</a>',
+                            '<a href="/shipping">shipping</a>'
+                            '<a href="/checkout">checkout</a>')
+
+    def fake_fetch(url, ua=None, timeout=12):
+        if url.endswith("/.well-known/ucp"):
+            return {"status": 404, "headers": {}, "body": "",
+                    "truncated": False, "final_url": url, "error": None}
+        if url.endswith("/"):
+            return {"status": 200, "headers": {}, "body": cart_home,
+                    "truncated": False, "final_url": url, "error": None}
+        if "/cart" in url or "/checkout" in url:
+            if block_cart and "OAI-SearchBot" in (ua or ""):
+                return {"status": 403, "headers": {}, "body": "",
+                        "truncated": False, "final_url": url, "error": None}
+            return {"status": 200, "headers": {},
+                    "body": "<html><body>cart ok</body></html>",
+                    "truncated": False, "final_url": url, "error": None}
+        return {"status": 404, "headers": {}, "body": "",
+                "truncated": False, "final_url": url, "error": None}
+    return fake_fetch
+
+
+def all_checks(report):
+    return [c for cat in report["categories"] for c in cat["checks"]]
+
+
+audit.fetch = make_cart_fetch()
+rep = audit.audit("127.0.0.1")
+cartp = [c for c in all_checks(rep) if c["id"].startswith("agent-ua:cart-path")]
+check("cart/checkout paths probed (2 paths x 2 fetchers)",
+      len(cartp) == 4, str(len(cartp)))
+check("open cart paths pass",
+      all(c["status"] == "pass" for c in cartp))
+scope = next(c for c in all_checks(rep) if c["id"] == "bot-test-scope")
+check("scope statement mentions cart/checkout probing",
+      "cart/checkout" in scope["detail"])
+
+audit.fetch = make_cart_fetch(block_cart=True)
+rep = audit.audit("127.0.0.1")
+fails = [c for c in all_checks(rep) if c["id"].startswith("agent-ua:cart-path")
+         and c["status"] == "fail"]
+check("blocked cart path fails (not silent)", len(fails) == 2, str(len(fails)))
+check("blocked path severity is medium", fails and fails[0]["severity"] == "medium")
+check("blocked path carries a fix", fails and bool(fails[0]["fix"]))
+check("blocked path does not tank category score",
+      next(c for c in rep["categories"]
+           if c["name"] == "AI bot access")["score"] >= 0)
+
+audit.fetch = _real_fetch
+audit.polite = _real_polite
+audit.normalize_domain = _real_normalize
+
 _srv.shutdown()
 print("\n%d passed, %d failed" % (PASS, FAIL))
 sys.exit(1 if FAIL else 0)
