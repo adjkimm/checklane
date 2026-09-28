@@ -1,0 +1,29 @@
+# Checklane
+
+Checklane grades websites 0-100 on AI-shopper readiness: whether AI shopping
+agents can find, read, and buy from a site.
+
+## What we offer
+
+- Free audit: enter any domain at https://getchecklane.com/ and get a 0-100
+  score in about a minute. No account, no login.
+- Full report ($9): every check explained, every fix ranked by impact, with
+  step-by-step implementation guidance your own team can follow.
+
+## What the audit checks
+
+- AI checkout handshake: Google's Universal Commerce Protocol profile
+  (/.well-known/ucp) and Agentic Commerce Protocol (ACP) checkout signals
+- schema.org Product/Offer markup: names, prices, photos, stock
+- XML sitemap and product feeds
+- robots.txt rules for AI crawlers (GPTBot, ClaudeBot, PerplexityBot,
+  Google-Extended, and others)
+- Page readability: real text, llms.txt, Open Graph tags
+
+## More
+
+- Monitoring beta (ongoing AI-readiness checks + alerts):
+  https://getchecklane.com/#beta
+- Services (AI agent platform management, AI agent marketing):
+  https://getchecklane.com/#services
+- FAQ: https://getchecklane.com/#faq

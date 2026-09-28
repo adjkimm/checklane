@@ -7,6 +7,16 @@
 <title>Checklane: Will AI shoppers find your site?</title>
 <meta name="description" content="Shoppers are starting to let AI do the buying. Checklane grades your site 0–100 on AI-shopper readiness. Free.">
 <link rel="stylesheet" href="/static/style.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Product",
+ "name":"Checklane Full AI-Readiness Report",
+ "description":"The complete Checklane audit report for your site: every check explained, every fix ranked by impact, with step-by-step implementation guidance.",
+ "brand":{"@type":"Brand","name":"Checklane"},
+ "url":"https://getchecklane.com/",
+ "offers":{"@type":"Offer","price":"9","priceCurrency":"USD",
+  "availability":"https://schema.org/InStock",
+  "url":"https://getchecklane.com/#audit"}}
+</script>
 </head>
 <body>
 
@@ -41,12 +51,21 @@
                placeholder="yoursite.com" aria-label="Your site domain">
         <button type="submit" class="btn btn-large">Run free audit</button>
       </form>
-      <p class="micro">Free. Takes about a minute. We only read your public pages.
-        No account, no login. Works for any website, store or not.</p>
+      <p class="micro">Free score. Full report $9, optional. Takes about a minute.
+        We only read your public pages. No account, no login.</p>
       <img class="hero-img" src="/static/img/hero-ai-shopper.webp" alt="A friendly AI robot with a shopping bag visiting a small storefront" loading="lazy" />
 
       <div id="audit-status" class="audit-status" hidden></div>
       <div id="audit-result" class="audit-result" hidden></div>
+    </div>
+  </section>
+
+  <!-- ============ DEMO RESULT ============ -->
+  <section class="demo-strip">
+    <div class="wrap">
+      <p class="micro">See what a result looks like: <strong>allbirds.com</strong>
+        scored <strong>89&nbsp;/&nbsp;100&nbsp;(A)</strong> when we audited it in
+        September 2026. <a href="#audit">Run yours free</a>.</p>
     </div>
   </section>
 
@@ -61,14 +80,13 @@
         <div class="step">
           <div class="step-n">1</div>
           <h3>Test your site</h3>
-          <p>Type in your domain. About a minute later you get a 0&ndash;100 score
-            across the five things AI shoppers look for.</p>
+          <p>Type in your domain. Free, no account.</p>
         </div>
         <div class="step">
           <div class="step-n">2</div>
           <h3>See your score</h3>
           <p>A 0&ndash;100 grade in about a minute, across the five things AI
-            shoppers look for. Free, no account.</p>
+            shoppers look for.</p>
         </div>
         <div class="step">
           <div class="step-n">3</div>
@@ -137,15 +155,18 @@
           <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
           <h3>The AI checkout handshake</h3>
           <p>The behind-the-scenes file that tells AI shoppers &ldquo;yes, you can buy
-            here.&rdquo; It&rsquo;s the faster, more reliable machine path for agent
-            checkout. Browser-based AI shoppers can still buy through
+            here&rdquo;: Google&rsquo;s Universal Commerce Protocol profile
+            (<code>/.well-known/ucp</code>) and Agentic Commerce Protocol (ACP)
+            checkout signals. It&rsquo;s the faster, more reliable machine path for
+            agent checkout. Browser-based AI shoppers can still buy through
             normal checkout without it, but the handshake makes it consistent.</p>
         </div>
         <div class="check">
           <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
           <h3>Product info AI can read</h3>
-          <p>Clean, labeled details: names, photos, prices, stock. AI reads
-            labels first; unlabeled pages may as well be invisible.</p>
+          <p>Clean, labeled details using schema.org Product markup: names,
+            photos, prices, stock. AI reads labels first; unlabeled pages may
+            as well be invisible.</p>
         </div>
         <div class="check">
           <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -156,41 +177,24 @@
         <div class="check">
           <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           <h3>Are you blocking AI visitors?</h3>
-          <p>We visit your site as nine AI crawlers and fetchers. If your
-            security turns them away, you may be invisible to the AI systems
-            that shop for people, though blocking a training crawler
-            doesn&rsquo;t block AI shopping itself.</p>
+          <p>We visit your site as nine AI crawlers and fetchers (GPTBot,
+            ClaudeBot, PerplexityBot, Google&rsquo;s AI crawlers, and more) and
+            read your robots.txt bot rules. If your security turns them away,
+            you may be invisible to the AI systems that shop for people, though
+            blocking a training crawler doesn&rsquo;t block AI shopping itself.</p>
         </div>
         <div class="check">
           <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           <h3>Can AI read your pages?</h3>
-          <p>The basics: real text (not just JavaScript), readable pages, and no
-            accidental &ldquo;keep out&rdquo; signs.</p>
+          <p>The basics: real text (not just JavaScript), readable pages, an
+            llms.txt file, Open Graph share tags, and no accidental
+            &ldquo;keep out&rdquo; signs.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ============ BETA WAITING LIST ============ -->
-  <section class="section" id="beta">
-    <div class="wrap">
-      <h2>Want us to keep watch?</h2>
-      <p class="section-sub">AI changes fast, and a site that&rsquo;s readable
-        today can silently break tomorrow. We&rsquo;re building ongoing
-        monitoring for small businesses: regular checks that AI shoppers can still
-        find your products, alerts when AI visits your site, and a Checklane
-        badge showing the audit date and exactly what was tested. The badge is
-        an attestation of what we checked. It is not approval, endorsement,
-        or a guarantee. Join the waiting list, and we&rsquo;ll let you in first.</p>
-      <form id="beta-form" class="beta-form" autocomplete="on">
-        <input id="beta-name" name="name" type="text" placeholder="Your name" aria-label="Your name">
-        <input id="beta-email" name="email" type="email" placeholder="you@yoursite.com" aria-label="Email">
-        <button type="submit" class="btn">Join the waiting list</button>
-      </form>
-      <div class="field-err" id="beta-err"></div>
-      <p class="micro" id="beta-done" hidden>You&rsquo;re on the list, and we&rsquo;ll reach out when the beta opens.</p>
-    </div>
-  </section>
+
 
   <!-- ============ FAQ ============ -->
   <section class="section section-alt" id="faq">
@@ -198,12 +202,11 @@
       <h2>Common questions</h2>
       <div class="faq">
         <details>
-          <summary>Does a good score guarantee sales?</summary>
-          <p>No, but it answers a more urgent question first: can AI
-            shoppers buy from you <em>at all</em>? Many sites struggle on basic
-            technical grounds before products or prices ever matter. A good
-            score means nothing <em>technical</em> is standing between you and the AI
-            shopper.</p>
+          <summary>What does my score tell me?</summary>
+          <p>Whether AI shoppers can technically find, read, and buy from your
+            site. It answers the urgent question first: can AI shoppers buy from
+            you <em>at all</em>? Many sites struggle on basic technical grounds
+            before products or prices ever matter.</p>
         </details>
         <details>
           <summary>Do you need my password or admin access?</summary>
@@ -243,6 +246,27 @@
             start, making sure you can compete.</p>
         </details>
       </div>
+    </div>
+  </section>
+
+  <!-- ============ BETA WAITING LIST ============ -->
+  <section class="section" id="beta">
+    <div class="wrap">
+      <h2>Want us to keep watch?</h2>
+      <p class="section-sub">AI changes fast, and a site that&rsquo;s readable
+        today can silently break tomorrow. We&rsquo;re building ongoing
+        monitoring for small businesses: regular checks that AI shoppers can still
+        find your products, alerts when AI visits your site, and a Checklane
+        badge showing the audit date and exactly what was tested. The badge is
+        an attestation of what we checked. It is not approval, endorsement,
+        or a guarantee. Join the waiting list, and we&rsquo;ll let you in first.</p>
+      <form id="beta-form" class="beta-form" autocomplete="on">
+        <input id="beta-name" name="name" type="text" placeholder="Your name" aria-label="Your name">
+        <input id="beta-email" name="email" type="email" placeholder="you@yoursite.com" aria-label="Email">
+        <button type="submit" class="btn">Join the waiting list</button>
+      </form>
+      <div class="field-err" id="beta-err"></div>
+      <p class="micro" id="beta-done" hidden>You&rsquo;re on the list, and we&rsquo;ll reach out when the beta opens.</p>
     </div>
   </section>
 
@@ -286,8 +310,8 @@
   <div class="wrap">
     <p><span class="brand-mark">▦</span> Checklane helps small businesses get found by AI shoppers.</p>
     <p class="micro footer-links"><a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/refund">Refund policy</a></p>
-    <p class="micro">Checklane grades what&rsquo;s technically verifiable about your store
-      at audit time. A score is not a promise of sales or AI recommendations.</p>
+    <p class="micro">Checklane grades what&rsquo;s technically verifiable about your site
+      at audit time.</p>
   </div>
 </footer>
 

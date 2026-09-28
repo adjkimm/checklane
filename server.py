@@ -116,9 +116,9 @@ PURCHASES_FILE = os.path.join(DATA_DIR, "purchases.jsonl")
 # Guarantee wording shown on the paywall's legal page and in buyer receipts
 # (agreed with the site workstream; keep in sync with static/legal/refund.html).
 RECEIPT_GUARANTEE = (
-    "Love it or your money back: full refund within 7 days, no questions asked. "
+    "Love it or your money back — full refund within 7 days, no questions asked. "
     "And if your report ever fails to generate or you lose access, "
-    "we'll re-run it for you or refund you, your choice. "
+    "we'll re-run it for you or refund you — your choice. "
     "Refunds go back to your card, typically within 5–10 business days."
 )
 
@@ -360,11 +360,11 @@ def verified_paid_report(session_id):
         return None, (402, {"error": "payment not completed yet"})
     ok, reason, token = fulfill_paid_session(session, source="browser_return")
     if not ok:
-        return None, (410, {"error": "this report is unavailable right now. "
+        return None, (410, {"error": "this report is unavailable right now — "
                                      "please try again in a minute"})
     entry = REPORT_CACHE.get(token) if token else None
     if entry is None:
-        return None, (410, {"error": "this report is unavailable right now. "
+        return None, (410, {"error": "this report is unavailable right now — "
                                      "please try again in a minute"})
     return entry[0], None
 
@@ -422,7 +422,7 @@ def _format_amount(amount_cents, currency):
     try:
         cents = int(amount_cents)
     except (TypeError, ValueError):
-        return "n/a"
+        return "—"
     cur = (currency or "usd").upper()
     if cur == "USD":
         return "$%.2f" % (cents / 100.0)
@@ -441,18 +441,18 @@ def send_buyer_receipt(email, session_id, domain, amount_cents, currency):
     lost_link = BASE_URL + "/lost-report"
     subject = "Your Checklane report for %s" % (domain or "your store")
     body = (
-        "Thanks for your purchase. Your full Checklane report is ready.\n"
+        "Thanks for your purchase — your full Checklane report is ready.\n"
         "\n"
         "  Domain:  {domain}\n"
         "  Amount:  {amount}\n"
         "  Report:  {report_link}\n"
         "\n"
-        "Your report link is permanent, so bookmark it. If you ever lose it,\n"
+        "Your report link is permanent — bookmark it. If you ever lose it,\n"
         "enter your email at {lost_link} and we'll resend it.\n"
         "\n"
         "{guarantee}\n"
         "\n"
-        "- Checklane\n"
+        "— Checklane\n"
     ).format(domain=domain or "your store",
              amount=_format_amount(amount_cents, currency),
              report_link=report_link,
@@ -468,7 +468,7 @@ def send_buyer_receipt(email, session_id, domain, amount_cents, currency):
 def notify_lead(lead):
     when = time.strftime("%Y-%m-%d %H:%M PT", time.localtime(lead["ts"]))
     body = (
-        "New Checklane lead: {when}\n\n"
+        "New Checklane lead — {when}\n\n"
         "Name:     {name}\n"
         "Business: {business}\n"
         "Domain:   {domain}\n"
@@ -483,7 +483,7 @@ def notify_lead(lead):
 def notify_beta_signup(entry):
     when = time.strftime("%Y-%m-%d %H:%M PT", time.localtime(entry["ts"]))
     body = (
-        "New Checklane beta waiting-list signup: {when}\n\n"
+        "New Checklane beta waiting-list signup — {when}\n\n"
         "Name:  {name}\n"
         "Email: {email}\n"
     ).format(when=when, **entry)
@@ -518,7 +518,7 @@ LOST_REPORT_HTML = """<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Lost your Checklane report? | Checklane</title>
+<title>Lost your Checklane report? — Checklane</title>
 <style>
 body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   background:#0f172a;color:#e2e8f0;margin:0;padding:2rem 1rem;line-height:1.6}
@@ -572,7 +572,7 @@ document.getElementById("f").addEventListener("submit", function (ev) {
       "a permanent report link is on its way. Please check your inbox " +
       "(and spam folder).";
   }).catch(function () {
-    msg.textContent = "Something went wrong. Please try again in a minute.";
+    msg.textContent = "Something went wrong — please try again in a minute.";
   }).finally(function () { btn.disabled = false; });
 });
 </script>
@@ -640,7 +640,7 @@ class Handler(BaseHTTPRequestHandler):
             ok, retry = _rate_limit_ok(ip, key="api-get")
             if not ok:
                 return self._send(
-                    429, json.dumps({"error": "rate limit exceeded. "
+                    429, json.dumps({"error": "rate limit exceeded — "
                                               "please slow down"}),
                     "application/json; charset=utf-8",
                     {"Retry-After": str(retry)})
@@ -649,6 +649,9 @@ class Handler(BaseHTTPRequestHandler):
             # missing sitemap — make it true.
             return self._serve_file("sitemap.xml",
                                     "application/xml; charset=utf-8")
+        if path in ("/robots.txt", "/llms.txt"):
+            # Practice-what-we-preach: real crawler file + AI-reader file.
+            return self._serve_file(path[1:], "text/plain; charset=utf-8")
         if path == "/":
             return self._serve_file("index.html")
         if path.startswith("/static/"):
@@ -668,7 +671,7 @@ class Handler(BaseHTTPRequestHandler):
             # exhausted free tier when audits hold threads up to ~130s.
             if not AUDIT_SEM.acquire(blocking=False):
                 return self._send(
-                    429, json.dumps({"error": "audit servers are busy. "
+                    429, json.dumps({"error": "audit servers are busy — "
                                               "please retry in a minute"}),
                     "application/json; charset=utf-8",
                     {"Retry-After": AUDIT_BUSY_RETRY_AFTER})
@@ -760,7 +763,7 @@ class Handler(BaseHTTPRequestHandler):
             ok, retry = _rate_limit_ok(ip)
             if not ok:
                 return self._send(
-                    429, json.dumps({"error": "rate limit exceeded. "
+                    429, json.dumps({"error": "rate limit exceeded — "
                                               "please slow down"}),
                     "application/json; charset=utf-8",
                     {"Retry-After": str(retry)})
@@ -779,7 +782,7 @@ class Handler(BaseHTTPRequestHandler):
                                        per_minute=3.0, burst=3)
             if not ok:
                 return self._send(
-                    429, json.dumps({"error": "rate limit exceeded. "
+                    429, json.dumps({"error": "rate limit exceeded — "
                                               "please try again later"}),
                     "application/json; charset=utf-8",
                     {"Retry-After": str(retry)})
@@ -833,7 +836,7 @@ class Handler(BaseHTTPRequestHandler):
             notify_lead(lead)
             return self._json(200, {
                 "ok": True, "lead_id": lead["id"], "freemail": freemail,
-                "note": ("Heads up: gate counting uses business-domain emails. "
+                "note": ("Heads up: gate counting uses business-domain emails — "
                          "free-mail signups don't count as verifiable merchants.")
                         if freemail else None,
             })
@@ -890,7 +893,7 @@ class Handler(BaseHTTPRequestHandler):
             entry = REPORT_CACHE.get(token)
             if not entry:
                 return self._json(400, {
-                    "error": "report expired. Please re-run the free audit"})
+                    "error": "report expired — please re-run the free audit"})
             domain = entry[0].get("domain") or "your store"
             try:
                 session = stripe_api("POST", "/v1/checkout/sessions", {
@@ -899,7 +902,7 @@ class Handler(BaseHTTPRequestHandler):
                     "cancel_url": BASE_URL + "/",
                     "line_items[0][price_data][currency]": REPORT_CURRENCY,
                     "line_items[0][price_data][product_data][name]":
-                        "Checklane full report for " + domain,
+                        "Checklane full report — " + domain,
                     "line_items[0][price_data][unit_amount]": str(REPORT_PRICE_CENTS),
                     "line_items[0][quantity]": "1",
                     # M10: statement descriptor — Stripe allows max 22 chars,
