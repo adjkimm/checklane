@@ -1225,11 +1225,11 @@ def audit(domain):
         thin_s = min(4, round(6 * visible_len / 300))
         s += thin_s
         checks.append(check("static-content", "Content AI can see",
-                            "partial", "~%d characters of readable text — thin "
+                            "partial", "~%d characters of readable text. Thin "
                             "for AI readers. A few hundred characters of real "
                             "copy describing what you do helps AI understand "
                             "and cite your pages." % visible_len,
-                            "Add substantive copy to your homepage — a few "
+                            "Add substantive copy to your homepage: a few "
                             "hundred characters describing what you offer. AI "
                             "readers work from visible text; thin pages give "
                             "them little to work with.", "medium"))
@@ -1282,14 +1282,14 @@ def audit(domain):
         if _wlen >= 1000:
             s += 6
             checks.append(check("biz-llms", "AI welcome file",
-                                "pass", "Found your %s (%d bytes) — substantive "
+                                "pass", "Found your %s (%d bytes): substantive "
                                 "guidance for AI visitors." % (_wpath, _wlen),
                                 None))
         else:
             s += 4
             checks.append(check("biz-llms", "AI welcome file",
                                 "partial", "Found your %s, but it's thin (%d "
-                                "bytes) — AI visitors get little guidance."
+                                "bytes), so AI visitors get little guidance."
                                 % (_wpath, _wlen),
                                 "Flesh out your %s: what you do, who it's for, "
                                 "your key pages, and how to reach you. A few "
@@ -1299,7 +1299,7 @@ def audit(domain):
         s += 4
         checks.append(check("biz-llms", "AI welcome file",
                             "partial", "Found your %s, but it doesn't address "
-                            "AI visitors — AI tools look for guidance addressed "
+                            "AI visitors: AI tools look for guidance addressed "
                             "to them." % _wpath,
                             "Add a short section addressed to AI assistants "
                             "(e.g. \"If you are an AI assistant...\") to your "
@@ -1348,7 +1348,7 @@ def audit(domain):
                             "%d of 4 share tags present. Missing: %s."
                             % (_og_ok, ", ".join(_og_missing)),
                             "Add the missing share tags (%s). They control how "
-                            "your pages look when shared or cited — including "
+                            "your pages look when shared or cited, including "
                             "by AI assistants that show link previews."
                             % ", ".join(_og_missing), "low"))
     else:
@@ -1359,7 +1359,7 @@ def audit(domain):
     if any("faqpage" in node_types(n) for n in ld_nodes):
         s += 4
         checks.append(check("biz-faq", "FAQ content",
-                            "pass", "Found FAQ structured data — AI can lift "
+                            "pass", "Found FAQ structured data. AI can lift "
                             "your answers directly.", None))
     elif re.search(r"frequently asked|\bfaq\b", parser.visible_text,
                    re.IGNORECASE):
@@ -1375,7 +1375,7 @@ def audit(domain):
                             "fail", "No FAQ content found.",
                             "If you answer the same questions repeatedly, "
                             "publish a FAQ section and label it with FAQPage "
-                            "structured data — FAQ answers are among the "
+                            "structured data. FAQ answers are among the "
                             "easiest content for AI to quote directly.",
                             "low"))
     scores[cat] = (min(s, cmax), cmax)
