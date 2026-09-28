@@ -342,7 +342,7 @@ for c in synth["categories"][:3]:
     c["score"], c["max"] = 0, 0
 html2 = report_html.render_report(synth)
 check("N/A pill rendered", 'pill na">N/A' in html2)
-check("N/A note rendered", "Not scored — no storefront" in html2)
+check("N/A note rendered", "Not scored: no storefront detected." in html2)
 check("site-type note in brief", "doesn&#x27;t sell products online" in html2
       or "doesn't sell products online" in html2)
 

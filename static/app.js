@@ -64,8 +64,7 @@
   }
 
   function scoreCard(report, minimal) {
-    var ctas = minimal ? "" : buyBox(report.domain) + messageBox(report.domain) +
-      sharePrompt();
+    var ctas = minimal ? "" : buyBox(report.domain) + messageBox(report.domain);
     return '<div class="report-card">' +
       '<div class="score-row">' + scoreRing(report.score) +
       '<div class="score-meta"><h3><span class="grade grade-' + report.grade + '">' +
@@ -74,19 +73,6 @@
       "<p class=\"scoring-note\">Scoring updated Sep 2026: we now grade AI discoverability too, so this score isn\u2019t directly comparable to earlier audits.</p></div></div>" +
       ctas +
       "</div>";
-  }
-
-  /* Forward prompt: after the free audit renders, invite the visitor to
-     pass the free audit on to someone who runs a website. Tasteful,
-     one line of copy plus a copy-link button. (Board-review note: this
-     touches the free-audit flow, which feeds the $9 report funnel, so it
-     is flagged for Advisory Board pre-launch review.) */
-  function sharePrompt() {
-    return '<div class="gate gate-alt share-prompt"><h3>Know someone with a website?</h3>' +
-      "<p>Send them the free audit. It takes about a minute and shows whether " +
-      "AI shoppers can find, read, and buy from their site.</p>" +
-      '<button type="button" class="btn btn-small" id="copy-link-btn">Copy link</button>' +
-      '<p class="micro" id="copy-link-done" hidden>Link copied.</p></div>';
   }
 
   /* The paid full report is served by /report as a print-ready HTML page
@@ -141,7 +127,6 @@
         resultEl.innerHTML = scoreCard(currentReport);
         wireBuyButton();
         wireMessageForm();
-        wireShareButton();
         resultEl.scrollIntoView({ behavior: "smooth", block: "start" });
       })
       .catch(function (err) {
@@ -184,34 +169,6 @@
           btn.innerHTML = label;
           $("buy-err").textContent = "Something went wrong: " + err;
         });
-    });
-  }
-
-  function wireShareButton() {
-    var btn = $("copy-link-btn");
-    if (!btn) return;
-    btn.addEventListener("click", function () {
-      var url = "https://getchecklane.com/";
-      function done() {
-        $("copy-link-done").hidden = false;
-        btn.textContent = "Copied";
-      }
-      function fallback() {
-        var ta = document.createElement("textarea");
-        ta.value = url;
-        ta.setAttribute("readonly", "");
-        ta.style.position = "absolute";
-        ta.style.left = "-9999px";
-        document.body.appendChild(ta);
-        ta.select();
-        try { document.execCommand("copy"); done(); } catch (e) { /* no-op */ }
-        document.body.removeChild(ta);
-      }
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(url).then(done, fallback);
-      } else {
-        fallback();
-      }
     });
   }
 
