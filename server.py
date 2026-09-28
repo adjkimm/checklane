@@ -27,11 +27,15 @@ Serves the landing page + audit widget API locally:
 Fulfillment design (Gate A): the Stripe Checkout Session is the durable key.
 verified_paid_report / fulfill_paid_session verify the session against the
 Stripe API, and on cache miss re-run the audit from the session metadata so
-a paid session can NEVER 410 — even across restarts/deploys. Purchases are
-recorded to purchases.jsonl AND to stdout as rich "fulfillment" events
-(Render log retention is the durable backup; the free tier's disk is
-ephemeral). The webhook is the source of truth; the buyer also gets a
-receipt email with a permanent /report?session_id=... link.
+a paid session can NEVER 410, even across restarts. Paid reports and the
+purchase ledger live in sqlite (store.py, checklane.db), so fulfillment
+state survives process restarts and Stripe redeliveries are idempotent
+(PRIMARY KEYs on stripe_session_id / event id; receipt-sent flags in the
+DB, not in process memory). Legacy purchases.jsonl rows are imported once
+at startup. Purchases are also logged to stdout as rich "fulfillment"
+events (Render log retention is the durable backup; the free tier's disk
+is ephemeral across deploys). The webhook is the source of truth; the buyer
+also gets a receipt email with a permanent /report?session_id=... link.
 
 Local demo only. Leads are stored in data/*.jsonl on disk. Nothing is sent
 anywhere — except an email notification to NOTIFY_EMAIL via Resend when a
@@ -59,6 +63,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import audit as audit_engine
 import report_html
+import store
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(HERE, "static")
@@ -112,6 +117,11 @@ REPORT_PRICE_CENTS = int(os.environ.get("REPORT_PRICE_CENTS", "900"))
 REPORT_CURRENCY = os.environ.get("REPORT_CURRENCY", "usd")
 BASE_URL = os.environ.get("BASE_URL", "https://getchecklane.com")
 PURCHASES_FILE = os.path.join(DATA_DIR, "purchases.jsonl")
+# Durable store (sqlite): paid reports + purchase ledger survive restarts.
+# On the Render free tier the disk is ephemeral across deploys, so this
+# covers process restarts; receipt emails + the Stripe dashboard remain the
+# durable records across deploys.
+STORE_DB_PATH = os.path.join(DATA_DIR, "checklane.db")
 
 # Guarantee wording shown on the paywall's legal page and in buyer receipts
 # (agreed with the site workstream; keep in sync with static/legal/refund.html).
@@ -158,10 +168,45 @@ def _rate_limit_ok(ip, key="api", per_minute=10.0, burst=20):
 AUDIT_SEM = threading.Semaphore(2)
 AUDIT_BUSY_RETRY_AFTER = "30"
 
-# In-memory cache: report_token -> (full report dict, timestamp).
-# Lets /api/report serve the paid report without re-running the audit.
+# In-memory hot cache: report_token -> (full report dict, timestamp).
+# Backed by the durable store below, so a restart no longer loses reports.
+# Unpaid (free-audit) entries keep the old 2h TTL semantics; paid entries
+# are additionally persisted with no expiry.
 REPORT_CACHE = {}
 REPORT_TTL_S = 2 * 3600
+
+
+def _report_entry_for_token(token):
+    """Return (report_dict, from_store) for a report token.
+
+    Hot cache first, durable store as fallback (repopulates the cache).
+    Unpaid reports past REPORT_TTL_S are treated as expired, matching the
+    old in-memory behavior.
+    """
+    if token:
+        entry = REPORT_CACHE.get(token)
+        if entry is not None:
+            return entry[0], False
+        try:
+            report = store.get_report(token, ttl_s=REPORT_TTL_S)
+        except Exception:
+            report = None
+        if report is not None:
+            REPORT_CACHE[token] = (report, time.time())
+            return report, True
+    return None, False
+
+
+# One fulfillment at a time per session id: concurrent Stripe webhook
+# redeliveries (or webhook + browser return racing) must not double-audit,
+# double-log, or double-email.
+_FULFILL_LOCKS = {}
+_FULFILL_LOCKS_GUARD = threading.Lock()
+
+
+def _fulfill_lock(key):
+    with _FULFILL_LOCKS_GUARD:
+        return _FULFILL_LOCKS.setdefault(key, threading.Lock())
 
 
 def price_display():
@@ -175,6 +220,10 @@ def prune_report_cache():
     for token in [t for t, (_, ts) in REPORT_CACHE.items()
                   if now - ts > REPORT_TTL_S]:
         del REPORT_CACHE[token]
+    try:
+        store.prune_unpaid(REPORT_TTL_S)
+    except Exception:
+        pass
 
 
 def stripe_api(method, path, params=None):
@@ -198,12 +247,10 @@ def stripe_api(method, path, params=None):
         raise RuntimeError("stripe %s: %s" % (e.code, detail))
 
 
-# session_ids already recorded as purchases (dedupe: /api/report and /report
-# share verification; a customer may hit both).
-_LOGGED_PURCHASES = set()
-# session_ids that already got their buyer receipt email (webhook +
-# browser-return paths must not double-send).
-_RECEIPTED = set()
+# Idempotency state lives in the durable store (purchases.receipt_sent_at,
+# purchases keyed by stripe_session_id), not in process memory, so a Stripe
+# redelivery after a restart can neither double-log a purchase nor
+# double-send a buyer receipt.
 
 
 def verify_stripe_signature(payload, sig_header, secret):
@@ -246,98 +293,163 @@ def _session_buyer_email(session):
         return ""
 
 
+def _send_receipt_once(session_id, buyer_email, domain, amount_cents,
+                       currency):
+    """Attempt the buyer receipt email at most once per session.
+
+    The sent flag is stored in the DB. If the flag cannot be read the email
+    is attempted (a duplicate receipt is less bad than a lost one); the
+    mark is best-effort and any failure is logged.
+    """
+    if not buyer_email:
+        return
+    try:
+        if store.receipt_sent(session_id):
+            return
+    except Exception:
+        pass
+    send_buyer_receipt(buyer_email, session_id, domain,
+                       amount_cents, currency)
+    try:
+        store.mark_receipt_sent(session_id)
+    except Exception as e:
+        log_event("receipt_mark_failed",
+                  {"session_id": session_id, "error": str(e)[:100]})
+
+
 def fulfill_paid_session(session, source="webhook"):
     """Idempotent fulfillment for a paid Checkout Session.
 
     Verifies against the Stripe session object passed in. On report-cache
     miss, re-runs the audit from the session metadata (the session is the
     durable key) — a paid session can never 410, even across restarts.
-    Records the purchase (ledger + rich stdout event) and emails the buyer
-    a receipt with a permanent report link, once per session_id.
-    Returns (True, None, report_token) on success, (False, reason, None) when
-    the report could not be produced yet (caller should return non-2xx so
-    Stripe retries).
+    Records the purchase durably (sqlite purchases table, PRIMARY KEY on
+    stripe_session_id) and emails the buyer a receipt with a permanent
+    report link, once per session_id — redeliveries after a restart are
+    safe. Returns (True, None, report_token) on success, (False, reason,
+    None) when the report could not be produced yet (caller should return
+    non-2xx so Stripe retries).
     """
     session_id = str(session.get("id", ""))
     if not session_id:
         return False, "missing session id", None
     meta = session.get("metadata") or {}
     token = str(meta.get("report_token", ""))
-    entry = REPORT_CACHE.get(token) if token else None
-    if entry is None:
-        domain = str(meta.get("domain", ""))
-        if not domain:
-            return False, "no domain in session metadata", None
-        try:
-            prune_report_cache()
-            report = audit_engine.audit(domain)
-        except Exception as e:
-            log_event("fulfillment_audit_failed", {
-                "session_id": session_id, "domain": domain,
-                "error": str(e)[:200]})
-            return False, "audit failed", None
-        if not token:
-            token = uuid.uuid4().hex
-        REPORT_CACHE[token] = (report, time.time())
-        entry = REPORT_CACHE[token]
-    report = entry[0]
-    domain = report.get("domain") or str(meta.get("domain", ""))
+    payment_intent = str(session.get("payment_intent") or "")
     buyer_email = _session_buyer_email(session)
     amount_cents = session.get("amount_total")
     currency = session.get("currency")
-    if session_id not in _LOGGED_PURCHASES:
-        _LOGGED_PURCHASES.add(session_id)
-        append_jsonl(PURCHASES_FILE, {
-            "ts": int(time.time()),
-            "session_id": session_id,
-            "domain": domain,
-            "score": report.get("score"),
-            "amount_cents": amount_cents,
-            "currency": currency,
-            "buyer_email": buyer_email or None,
-            "report_token": token,
-            "fulfilled_via": source,
-        })
-        # Rich stdout event: Render log retention is the durable backup of
-        # the purchase ledger (the free tier's disk is ephemeral).
-        log_event("fulfillment", {
-            "session_id": session_id,
-            "domain": domain,
-            "score": report.get("score"),
-            "amount_cents": amount_cents,
-            "currency": currency,
-            "buyer_email": buyer_email or None,
-            "via": source,
-        })
-    if buyer_email and session_id not in _RECEIPTED:
-        _RECEIPTED.add(session_id)
-        send_buyer_receipt(buyer_email, session_id, domain,
+
+    with _fulfill_lock(session_id):
+        # Fast path: already fulfilled (possibly before a restart).
+        try:
+            purchase = store.get_purchase(session_id)
+        except Exception:
+            purchase = None
+        if purchase and purchase.get("report_token"):
+            report, _ = _report_entry_for_token(purchase["report_token"])
+            if report is not None:
+                domain = (purchase.get("domain")
+                          or str(meta.get("domain", "")))
+                _send_receipt_once(session_id, buyer_email, domain,
+                                   amount_cents, currency)
+                return True, None, purchase["report_token"]
+            # Purchase row exists but the report is gone (should not
+            # happen): fall through and rebuild it.
+
+        report, _ = _report_entry_for_token(token)
+        if report is None:
+            domain = str(meta.get("domain", ""))
+            if not domain:
+                return False, "no domain in session metadata", None
+            try:
+                prune_report_cache()
+                report = audit_engine.audit(domain)
+            except Exception as e:
+                log_event("fulfillment_audit_failed", {
+                    "session_id": session_id, "domain": domain,
+                    "error": str(e)[:200]})
+                return False, "audit failed", None
+            if not token:
+                token = uuid.uuid4().hex
+        domain = report.get("domain") or str(meta.get("domain", ""))
+
+        # Durable write first: paid report + purchase ledger. The PRIMARY
+        # KEY makes a concurrent/redelivered fulfillment a no-op insert.
+        try:
+            store.save_report(token, report, stripe_session_id=session_id,
+                              domain=domain, paid=1)
+            new_row = store.record_purchase(
+                session_id, email=buyer_email or None,
+                amount_cents=amount_cents, currency=currency, status="paid",
+                payment_intent=payment_intent or None, report_token=token,
+                domain=domain, score=report.get("score"))
+        except Exception as e:
+            log_event("fulfillment_store_failed", {
+                "session_id": session_id, "error": str(e)[:200]})
+            return False, "could not record purchase", None
+        REPORT_CACHE[token] = (report, time.time())
+
+        if new_row:
+            # Rich stdout event: Render log retention is the durable backup
+            # of the purchase ledger.
+            log_event("fulfillment", {
+                "session_id": session_id,
+                "domain": domain,
+                "score": report.get("score"),
+                "amount_cents": amount_cents,
+                "currency": currency,
+                "buyer_email": buyer_email or None,
+                "via": source,
+            })
+        else:
+            log_event("fulfillment_redelivery",
+                      {"session_id": session_id, "via": source})
+        _send_receipt_once(session_id, buyer_email, domain,
                            amount_cents, currency)
-    return True, None, token
+        return True, None, token
 
 
-def mark_charge_event(etype, charge):
-    """Record a refund or dispute on the purchase ledger + stdout."""
+def mark_charge_event(etype, charge, event_id=None):
+    """Record a refund or dispute idempotently + stdout.
+
+    Keyed on the Stripe event id, so a redelivered event is a no-op (a
+    second partial refund on the same charge arrives as a new event id and
+    is recorded). Also flips the matching purchase row to refunded/disputed
+    via payment_intent (captured at fulfillment time), so the ledger shows
+    the current state of each purchase.
+    """
     kind = "refund" if etype == "charge.refunded" else "dispute"
-    row = {
-        "ts": int(time.time()),
-        "type": kind,
-        "charge_id": charge.get("id"),
-        "payment_intent": charge.get("payment_intent"),
+    charge_id = charge.get("id")
+    payment_intent = charge.get("payment_intent")
+    dispute_reason = ((charge.get("dispute") or {}).get("reason")
+                      if kind == "dispute" else None)
+    key = event_id or charge_id or "%s-%d" % (kind, int(time.time()))
+    try:
+        new_event = store.record_charge_event(
+            key, kind, charge_id=charge_id, payment_intent=payment_intent,
+            amount_cents=charge.get("amount"), currency=charge.get("currency"),
+            dispute_reason=dispute_reason)
+    except Exception as e:
+        log_event("charge_event_store_failed", {"error": str(e)[:200]})
+        new_event = True  # fall through to stdout: never lose the signal
+    if not new_event:
+        log_event("charge_event_redelivery",
+                  {"event_id": key, "kind": kind})
+        return
+    updated = 0
+    try:
+        updated = store.set_purchase_status_by_payment_intent(
+            payment_intent, "refunded" if kind == "refund" else "disputed")
+    except Exception:
+        updated = 0
+    log_event("purchase_" + kind, {
+        "charge_id": charge_id,
+        "payment_intent": payment_intent,
         "amount_cents": charge.get("amount"),
         "currency": charge.get("currency"),
-        "dispute_reason": ((charge.get("dispute") or {}).get("reason")
-                           if kind == "dispute" else None),
-        # Correlate back to the original purchase via payment_intent in the
-        # Stripe dashboard; the charge object carries no session id.
-    }
-    append_jsonl(PURCHASES_FILE, row)
-    log_event("purchase_" + kind, {
-        "charge_id": row["charge_id"],
-        "payment_intent": row["payment_intent"],
-        "amount_cents": row["amount_cents"],
-        "currency": row["currency"],
-        "dispute_reason": row["dispute_reason"],
+        "dispute_reason": dispute_reason,
+        "purchase_updated": bool(updated),
     })
 
 
@@ -581,9 +693,9 @@ document.getElementById("f").addEventListener("submit", function (ev) {
 
 
 class Handler(BaseHTTPRequestHandler):
-    # Hardening: Render's edge exposes our Server header value as
-    # x-render-origin-server, so keep it generic. Never disclose the app
-    # version or the Python runtime version here.
+    # Generic server banner: BaseHTTPRequestHandler exposes this via the
+    # x-render-origin-server header, so keep it generic. Never disclose the
+    # app version or the Python runtime version here.
     server_version = "Checklane"
 
     def version_string(self):
@@ -592,6 +704,27 @@ class Handler(BaseHTTPRequestHandler):
         return self.server_version
 
     # -- helpers -------------------------------------------------------- #
+    def _security_headers(self):
+        """The standard security headers, on EVERY response.
+
+        H8 (extended): X-Content-Type-Options, CSP frame-ancestors, and
+        Referrer-Policy ride on all app responses (JSON, XML, plain text,
+        and HTML alike), not just HTML pages. HSTS stays host-gated:
+        only on real hosts, never on localhost, where it would pin a
+        non-TLS origin in the browser. Cache-Control: no-store is set here
+        (not separately in _send) so framework-generated error pages get it
+        exactly once too, via the end_headers() hook.
+        """
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Content-Security-Policy",
+                         "frame-ancestors 'self'")
+        self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
+        host = (self.headers.get("Host") or "").split(":")[0].lower()
+        if host not in ("localhost", "127.0.0.1", ""):
+            self.send_header("Strict-Transport-Security",
+                             "max-age=31536000; includeSubDomains")
+
     def _send(self, code, body, ctype="application/json; charset=utf-8",
               extra_headers=None):
         if isinstance(body, str):
@@ -599,23 +732,29 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
-        if ctype.startswith("text/html"):
-            # H8: security headers on HTML responses (the payments page and
-            # everything else that renders in a browser).
-            self.send_header("X-Content-Type-Options", "nosniff")
-            self.send_header("Content-Security-Policy",
-                             "frame-ancestors 'self'")
-            host = (self.headers.get("Host") or "").split(":")[0].lower()
-            if host not in ("localhost", "127.0.0.1", ""):
-                # HSTS only on real hosts — never on localhost, where it
-                # would pin a non-TLS origin in the browser.
-                self.send_header("Strict-Transport-Security",
-                                 "max-age=31536000; includeSubDomains")
+        self._security_headers()
         for k, v in (extra_headers or {}).items():
             self.send_header(k, v)
         self.end_headers()
-        self.wfile.write(body)
+        # HEAD responses carry the exact headers a GET would (including
+        # Content-Length) but no body.
+        if not getattr(self, "_head_only", False):
+            self.wfile.write(body)
+
+    def send_error(self, code, message=None, explain=None):
+        # Framework-generated error pages (501 for unimplemented methods,
+        # 400 for a bad request line, ...) bypass _send(), so give them
+        # the same security headers via the end_headers() hook below.
+        self._in_framework_error = True
+        try:
+            super().send_error(code, message, explain)
+        finally:
+            self._in_framework_error = False
+
+    def end_headers(self):
+        if getattr(self, "_in_framework_error", False):
+            self._security_headers()
+        super().end_headers()
 
     def _json(self, code, obj):
         self._send(code, json.dumps(obj), "application/json; charset=utf-8")
@@ -636,6 +775,17 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
     # -- routing --------------------------------------------------------- #
+    def do_HEAD(self):
+        # HEAD mirrors GET exactly: same routes, same response headers
+        # (including Content-Length), but no body. The _head_only flag is
+        # read by _send(); side-effecting GET routes (/api/*, /report)
+        # answer 405 under HEAD rather than running.
+        self._head_only = True
+        try:
+            self.do_GET()
+        finally:
+            self._head_only = False
+
     def do_GET(self):
         parsed = urllib.parse.urlsplit(self.path)
         path = parsed.path
@@ -644,6 +794,14 @@ class Handler(BaseHTTPRequestHandler):
         # Board condition 2: per-IP rate limit on GET /api/* too (the
         # concurrency cap alone lets one hostile IP hold both audit slots).
         if path.startswith("/api/"):
+            if getattr(self, "_head_only", False):
+                # A HEAD must never trigger an audit run, a Stripe
+                # verification, or any other /api/* side effect. Mirror the
+                # GET headers contract via 405, not by running the route.
+                return self._send(
+                    405, json.dumps({"error": "method not allowed"}),
+                    "application/json; charset=utf-8",
+                    {"Allow": "GET"})
             ip = _client_ip(self)
             ok, retry = _rate_limit_ok(ip, key="api-get")
             if not ok:
@@ -657,6 +815,9 @@ class Handler(BaseHTTPRequestHandler):
             # missing sitemap — make it true.
             return self._serve_file("sitemap.xml",
                                     "application/xml; charset=utf-8")
+        if path in ("/robots.txt", "/llms.txt"):
+            # Practice-what-we-preach: real crawler file + AI-reader file.
+            return self._serve_file(path[1:], "text/plain; charset=utf-8")
         if path == "/":
             return self._serve_file("index.html")
         if path.startswith("/static/"):
@@ -713,6 +874,14 @@ class Handler(BaseHTTPRequestHandler):
             prune_report_cache()
             token = uuid.uuid4().hex
             REPORT_CACHE[token] = (report, time.time())
+            try:
+                # Durable too: a restart between the free audit and checkout
+                # must not strand the buyer at "report expired".
+                store.save_report(token, report,
+                                  domain=report.get("domain"), paid=0)
+            except Exception as e:
+                # Fail-open for the free path: the audit itself succeeded.
+                log_event("report_store_failed", {"error": str(e)[:100]})
             return self._json(200, {
                 "domain": report.get("domain"),
                 "score": report.get("score"),
@@ -748,6 +917,13 @@ class Handler(BaseHTTPRequestHandler):
             # Paid full report as a print-ready HTML page. Same Stripe
             # verification as /api/report; the Download PDF button uses the
             # browser print dialog (Save as PDF). No new dependencies.
+            if getattr(self, "_head_only", False):
+                # Stripe verification is a side effect: never run it for a
+                # HEAD probe.
+                return self._send(
+                    405, json.dumps({"error": "method not allowed"}),
+                    "application/json; charset=utf-8",
+                    {"Allow": "GET"})
             session_id = (qs.get("session_id") or [""])[0].strip()
             report, err = verified_paid_report(session_id)
             if err:
@@ -907,11 +1083,11 @@ class Handler(BaseHTTPRequestHandler):
             # Creates a Stripe Checkout Session for the full report.
             # The report_token links the paid session back to the cached audit.
             token = str(data.get("report_token", "")).strip()
-            entry = REPORT_CACHE.get(token)
-            if not entry:
+            report, _from_store = _report_entry_for_token(token)
+            if report is None:
                 return self._json(400, {
                     "error": "report expired — please re-run the free audit"})
-            domain = entry[0].get("domain") or "your store"
+            domain = report.get("domain") or "your store"
             try:
                 session = stripe_api("POST", "/v1/checkout/sessions", {
                     "mode": "payment",
@@ -957,6 +1133,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": "invalid payload"})
         etype = str(event.get("type", ""))
         obj = (event.get("data") or {}).get("object") or {}
+        event_id = str(event.get("id", ""))
         if etype == "checkout.session.completed":
             ok, reason, _token = fulfill_paid_session(obj, source="webhook")
             if not ok:
@@ -965,7 +1142,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(500, {"error": reason})
             return self._json(200, {"ok": True})
         if etype in ("charge.refunded", "charge.dispute.created"):
-            mark_charge_event(etype, obj)
+            mark_charge_event(etype, obj, event_id=event_id)
             return self._json(200, {"ok": True})
         return self._json(200, {"ok": True, "ignored": etype})
 
@@ -991,6 +1168,17 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     import sys
     ensure_data_dir()
+    try:
+        store.configure(STORE_DB_PATH)
+        migrated = store.migrate_jsonl(PURCHASES_FILE)
+        if migrated:
+            print("Migrated %d legacy purchase row(s) from purchases.jsonl"
+                  % migrated, flush=True)
+    except Exception as e:
+        # Fail-open: the old in-memory behavior still works, but purchases
+        # and reports will not survive a restart. Loud so it gets noticed.
+        print("WARNING: durable store unavailable (%s) — running with"
+              " memory-only fulfillment state" % e, flush=True)
     if len(sys.argv) > 1:
         port = int(sys.argv[1])
     else:

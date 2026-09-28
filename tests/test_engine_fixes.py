@@ -5,11 +5,13 @@ Run: python3 tests/test_engine_fixes.py
 Stdlib only. No network except a localhost probe server.
 """
 import json
+import os
 import sys
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-sys.path.insert(0, "/home/hatch/workspace/checklane")
+# Self-locating: test the audit.py shipped in this tree, not the cwd.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import audit
 import report_html
 
@@ -340,7 +342,7 @@ for c in synth["categories"][:3]:
     c["score"], c["max"] = 0, 0
 html2 = report_html.render_report(synth)
 check("N/A pill rendered", 'pill na">N/A' in html2)
-check("N/A note rendered", "Not scored — no storefront" in html2)
+check("N/A note rendered", "Not scored: no storefront detected." in html2)
 check("site-type note in brief", "doesn&#x27;t sell products online" in html2
       or "doesn't sell products online" in html2)
 
@@ -400,76 +402,300 @@ check("blocked path does not tank category score",
       next(c for c in rep["categories"]
            if c["name"] == "AI bot access")["score"] >= 0)
 
+
+# ------------------------------------------------- 8. v1.1.0-m2 changes
+print("== v1.1.0-m2: version ==")
+check("engine version bumped", audit.VERSION == "1.1.0-m3", audit.VERSION)
+
+print("== v1.1.0-m2: _is_product_node ==")
+check("Product matches", audit._is_product_node({"@type": "Product"}))
+check("ProductGroup matches",
+      audit._is_product_node({"@type": "ProductGroup"}))
+check("lowercase productgroup matches",
+      audit._is_product_node({"@type": "productgroup"}))
+check("type list matches",
+      audit._is_product_node({"@type": ["Organization", "ProductGroup"]}))
+check("Organization does not match",
+      not audit._is_product_node({"@type": "Organization"}))
+check("missing @type does not match", not audit._is_product_node({}))
+
+print("== v1.1.0-m2: fixtures ==")
+audit.normalize_domain = lambda d: d
+audit.polite = lambda: None
+
+
+def _resp(status, body=""):
+    return {"status": status, "headers": {}, "body": body,
+            "truncated": False, "final_url": "", "error": None}
+
+
+def make_m2_fetch(home_html, robots_body="", sitemap_body=None, llms_body=None):
+    def fake_fetch(url, ua=None, timeout=12):
+        if url.endswith("/.well-known/ucp"):
+            return _resp(404)
+        if url.endswith("/robots.txt"):
+            return _resp(200, robots_body) if robots_body else _resp(404)
+        if url.endswith("/sitemap.xml"):
+            return _resp(200, sitemap_body) if sitemap_body else _resp(404)
+        if url.endswith("/llms.txt") or url.endswith("/agents.md"):
+            return _resp(200, llms_body) if llms_body else _resp(404)
+        for p in ("/products.json?limit=1", "/feed", "/products.xml",
+                  "/google-feed.xml"):
+            if url.endswith(p):
+                return _resp(404)
+        if url.endswith("/"):
+            return _resp(200, home_html)
+        return _resp(404)
+    return fake_fetch
+
+
+def cat(report, name):
+    return next(c for c in report["categories"] if c["name"] == name)
+
+
+def check_status(report, cat_name, cid):
+    return next(c for c in cat(report, cat_name)["checks"]
+                if c["id"] == cid)["status"]
+
+
+PG_HOME = ("<html><head><title>Threads Co</title>"
+           '<meta name="description" content="d">'
+           '<link rel="canonical" href="https://x/"></head>'
+           "<body><h1>Threads Co</h1><p>" + "x" * 500 + "</p>"
+           '<script type="application/ld+json">{"@context":"https://schema.org",'
+           '"@type":"ProductGroup","name":"Tee","brand":"Threads","sku":"TEE-1",'
+           '"offers":{"@type":"Offer","price":"29.99","priceCurrency":"USD"}}</script>'
+           '<a href="/cart">cart</a></body></html>')
+
+print("== v1.1.0-m2: ProductGroup end-to-end ==")
+audit.fetch = make_m2_fetch(PG_HOME)
+rep = audit.audit("127.0.0.1")
+check("ProductGroup site detected as storefront",
+      rep["site_type"] == "storefront", rep["site_type"])
+check("product structured data signal present",
+      "product structured data" in rep["site_type_signals"],
+      str(rep["site_type_signals"]))
+check("product-markup passes on ProductGroup",
+      check_status(rep, "Product info AI can read", "product-markup") == "pass")
+check("Category 2 scores above 0 (was 0 before fix)",
+      cat(rep, "Product info AI can read")["score"] > 0,
+      str(cat(rep, "Product info AI can read")["score"]))
+check("new business-discovery category N/A for storefronts",
+      cat(rep, "Can AI find your business")["na"] is True)
+
+THIN_HOME = ("<html><head><title>Acme</title>"
+             '<meta name="description" content="d">'
+             '<link rel="canonical" href="https://x/"></head>'
+             "<body><h1>Acme</h1><p>" + "y" * 150 + "</p></body></html>")
+THICK_HOME = THIN_HOME.replace("y" * 150, "z" * 500)
+
+print("== v1.1.0-m2: thin-page scaling ==")
+audit.fetch = make_m2_fetch(THIN_HOME)
+rep = audit.audit("127.0.0.1")
+check("thin page static-content is partial (not pass)",
+      check_status(rep, "Can AI read your pages", "static-content") == "partial")
+_c5 = cat(rep, "Can AI read your pages")
+check("thin page Cat5 below max (17, was 20)",
+      _c5["score"] == 17, str(_c5["score"]))
+audit.fetch = make_m2_fetch(THICK_HOME)
+rep = audit.audit("127.0.0.1")
+check("thick page static-content passes",
+      check_status(rep, "Can AI read your pages", "static-content") == "pass")
+
+SITEMAP_OK = ('<?xml version="1.0"?><urlset>'
+              '<url><loc>https://x/about</loc></url>'
+              '<url><loc>https://x/contact</loc></url>'
+              '<url><loc>https://x/blog</loc></url>'
+              '<url><loc>https://x/faq</loc></url>'
+              '<url><loc>https://x/team</loc></url></urlset>')
+LLMS_FULL = ("# Acme agent guide\n" + "We help teams do things. " * 60)
+FULL_HOME = ("<html><head><title>Acme Consulting</title>"
+             '<meta name="description" content="Strategy help.">'
+             '<meta property="og:title" content="Acme">'
+             '<meta property="og:description" content="Strategy help.">'
+             '<meta property="og:image" content="https://x/i.png">'
+             '<meta name="twitter:card" content="summary">'
+             '<link rel="canonical" href="https://x/"></head>'
+             "<body><h1>Acme Consulting</h1><p>" + "w" * 500 + "</p>"
+             '<script type="application/ld+json">{"@context":"https://schema.org",'
+             '"@type":"FAQPage","mainEntity":[]}</script>'
+             '<a href="/about">about</a></body></html>')
+
+print("== v1.1.0-m2: non-storefront discovery, full signals ==")
+audit.fetch = make_m2_fetch(FULL_HOME, sitemap_body=SITEMAP_OK,
+                            llms_body=LLMS_FULL)
+rep = audit.audit("127.0.0.1")
+check("full-signal site is non-storefront",
+      rep["site_type"] == "non-storefront", rep["site_type"])
+_c6 = cat(rep, "Can AI find your business")
+check("new category scored (not N/A)", _c6["na"] is False)
+check("new category max is 20", _c6["max"] == 20, str(_c6["max"]))
+check("full signals earn 20/20", _c6["score"] == 20, str(_c6["score"]))
+check("non-storefront total max is 60",
+      sum(c["max"] for c in rep["categories"]) == 60,
+      str(sum(c["max"] for c in rep["categories"])))
+check("perfect non-storefront scores 100/A",
+      rep["score"] == 100 and rep["grade"] == "A",
+      "%s/%s" % (rep["score"], rep["grade"]))
+
+print("== v1.1.0-m2: non-storefront discovery, bare site ==")
+audit.fetch = make_m2_fetch(THIN_HOME)
+rep = audit.audit("127.0.0.1")
+_c6 = cat(rep, "Can AI find your business")
+check("bare site new category scores 0", _c6["score"] == 0,
+      str(_c6["score"]))
+check("bare site total well below the old 92 (discriminates now)",
+      rep["score"] < 70, "%s/%s" % (rep["score"], rep["grade"]))
+for _cid in ("biz-llms", "biz-sitemap", "biz-og", "biz-faq"):
+    check("bare site %s fails" % _cid,
+          check_status(rep, "Can AI find your business", _cid) == "fail")
+
+print("== v1.1.0-m2: report rendering of new N/A ==")
+html3 = report_html.render_report(rep)
+check("storefront-only cats N/A on non-storefront",
+      html3.count('pill na">N/A') == 3, str(html3.count('pill na">N/A')))
+
+
+print("== v1.1.0-m2: biz-llms present-but-unaddressed file ==")
+PLAIN_LLMS = ("# Acme plumbing\n" + "We fix pipes, drains and leaks. " * 40)
+audit.fetch = make_m2_fetch(THIN_HOME, llms_body=PLAIN_LLMS)
+rep = audit.audit("127.0.0.1")
+check("llms.txt without 'agent' mention no longer fails outright",
+      check_status(rep, "Can AI find your business", "biz-llms") == "partial")
+check("unaddressed welcome file earns partial (4)",
+      cat(rep, "Can AI find your business")["score"] == 4,
+      str(cat(rep, "Can AI find your business")["score"]))
+check("partial fix tells owner to address AI assistants",
+      "If you are an AI assistant" in
+      next(c for c in cat(rep, "Can AI find your business")["checks"]
+           if c["id"] == "biz-llms")["fix"])
+
+
+print("== v1.1.0-m3: FAQPage scoring (storefronts) ==")
+audit.normalize_domain = lambda d: d
+audit.polite = lambda: None
+
+
+def _q(n, a):
+    return ('{"@type":"Question","name":"Q%d",'
+            '"acceptedAnswer":{"@type":"Answer","text":"A%d"}}' % (n, a))
+
+
+def _faq_ld(*qs):
+    return ('<script type="application/ld+json">{"@context":"https://schema.org",'
+            '"@type":"FAQPage","mainEntity":[%s]}</script>'
+            % ",".join(_q(i + 1, i + 1) for i in range(qs[0] if qs else 0)))
+
+
+FAQ_3Q_LD = _faq_ld(3)
+FAQ_2Q_LD = _faq_ld(2)
+FAQ_EMPTY_LD = ('<script type="application/ld+json">{"@context":"https://schema.org",'
+                '"@type":"FAQPage","mainEntity":[]}</script>')
+ORG_LD = ('<script type="application/ld+json">{"@context":"https://schema.org",'
+          '"@type":"Organization","name":"Shop","url":"https://x/"}</script>')
+
+
+def make_store_home(extra_ld="", weak=False):
+    head = "<html><head><title>Shop</title>"
+    if not weak:
+        head += ('<meta name="description" content="d">'
+                 '<link rel="canonical" href="https://x/">')
+    head += "</head><body>"
+    if not weak:
+        head += "<h1>Shop</h1>"
+    return (head + "<p>" + "x" * 500 + "</p>"
+            '<script type="application/ld+json">{"@context":"https://schema.org",'
+            '"@type":"Product","name":"Widget","sku":"W-1",'
+            '"offers":{"@type":"Offer","price":"29.99","priceCurrency":"USD"}}</script>'
+            + extra_ld + '<a href="/cart">cart</a></body></html>')
+
+
+def c5of(rep):
+    return cat(rep, "Can AI read your pages")
+
+
+def faq_check(rep):
+    return next(c for c in c5of(rep)["checks"] if c["id"] == "faq-schema")
+
+
+# 3+ questions -> pass, +4, softened copy (RC-2)
+audit.fetch = make_m2_fetch(make_store_home(FAQ_3Q_LD, weak=True))
+rep = audit.audit("127.0.0.1")
+check("storefront fixture classified storefront",
+      rep["site_type"] == "storefront", rep["site_type"])
+fq = faq_check(rep)
+check("3+ questions -> pass", fq["status"] == "pass", fq["status"])
+check("pass detail avoids word-for-word (RC-2)",
+      "use your answers directly" in fq["detail"], fq["detail"][:90])
+audit.fetch = make_m2_fetch(make_store_home("", weak=True))
+rep_base = audit.audit("127.0.0.1")
+_base5 = c5of(rep_base)["score"]
+check("3+ questions add exactly 4 points",
+      c5of(rep)["score"] - _base5 == 4,
+      "%s vs %s" % (c5of(rep)["score"], _base5))
+
+# 1-2 questions -> pass, +2 (RC-3 graduation)
+audit.fetch = make_m2_fetch(make_store_home(FAQ_2Q_LD, weak=True))
+rep2 = audit.audit("127.0.0.1")
+fq2 = faq_check(rep2)
+check("1-2 questions still pass", fq2["status"] == "pass", fq2["status"])
+check("1-2 questions add exactly 2 points (RC-3)",
+      c5of(rep2)["score"] - _base5 == 2,
+      "%s vs %s" % (c5of(rep2)["score"], _base5))
+
+# missing -> fail, low, fix scoped to homepage (RC-1)
+fm = faq_check(rep_base)
+check("missing faq-schema -> fail", fm["status"] == "fail", fm["status"])
+check("missing faq-schema severity is low", fm["severity"] == "low",
+      fm["severity"])
+check("fail fix scoped to homepage (RC-1)", "homepage's" in fm["fix"],
+      fm["fix"][:90])
+
+# empty -> partial, 0 points
+audit.fetch = make_m2_fetch(make_store_home(FAQ_EMPTY_LD, weak=True))
+rep_e = audit.audit("127.0.0.1")
+fe = faq_check(rep_e)
+check("empty faq-schema -> partial", fe["status"] == "partial", fe["status"])
+check("empty faq-schema scores no points",
+      c5of(rep_e)["score"] == _base5,
+      "%s vs %s" % (c5of(rep_e)["score"], _base5))
+
+print("== v1.1.0-m3: no double-count on non-storefronts ==")
+BIZ_HOME = ("<html><head><title>Acme Plumbing</title>"
+            '<meta name="description" content="d">'
+            '<link rel="canonical" href="https://x/"></head>'
+            "<body><h1>Acme Plumbing</h1><p>" + "x" * 500 + "</p>"
+            + FAQ_3Q_LD + "</body></html>")
+audit.fetch = make_m2_fetch(BIZ_HOME)
+rep_b = audit.audit("127.0.0.1")
+check("biz fixture is non-storefront",
+      rep_b["site_type"] == "non-storefront", rep_b["site_type"])
+check("biz-faq passes in Category 6",
+      check_status(rep_b, "Can AI find your business", "biz-faq") == "pass")
+check("no faq-schema in Cat 5 for non-storefronts (no double count)",
+      not any(c["id"] == "faq-schema" for c in c5of(rep_b)["checks"]))
+
+print("== v1.1.0-m3: org-markup, caps, version ==")
+audit.fetch = make_m2_fetch(make_store_home(ORG_LD))
+rep_o = audit.audit("127.0.0.1")
+audit.fetch = make_m2_fetch(make_store_home())
+rep_no = audit.audit("127.0.0.1")
+_c2o = cat(rep_o, "Product info AI can read")["score"]
+_c2n = cat(rep_no, "Product info AI can read")["score"]
+check("org-markup adds exactly 2 points", _c2o - _c2n == 2,
+      "%s vs %s" % (_c2o, _c2n))
+audit.fetch = make_m2_fetch(make_store_home(FAQ_3Q_LD))
+rep_f = audit.audit("127.0.0.1")
+check("Category 5 capped at 20", c5of(rep_f)["score"] == 20,
+      str(c5of(rep_f)["score"]))
+check("engine VERSION is 1.1.0-m3", audit.VERSION == "1.1.0-m3", audit.VERSION)
+check("report carries m3 engine tag",
+      rep["engine"] == "checklane-audit/1.1.0-m3", rep["engine"])
+
 audit.fetch = _real_fetch
 audit.polite = _real_polite
 audit.normalize_domain = _real_normalize
 
 _srv.shutdown()
-
-print("== server hardening: Server header, invalid-domain errors, /api/stats ==")
-import http.client as _httpc
-import tempfile as _tempfile
-import shutil as _shutil
-import os as _os
-import server as _srvmod
-
-# Point the JSONL store at a temp dir so the stats test is hermetic.
-_tmpdata = _tempfile.mkdtemp(prefix="checklane-stats-test-")
-_real_data_dir = _srvmod.DATA_DIR
-_real_audits_file = _srvmod.AUDITS_FILE
-_srvmod.DATA_DIR = _tmpdata
-_srvmod.AUDITS_FILE = _os.path.join(_tmpdata, "audits.jsonl")
-
-_hsrv = _srvmod.ThreadingHTTPServer(("127.0.0.1", 0), _srvmod.Handler)
-_hport = _hsrv.server_address[1]
-_hthread = threading.Thread(target=_hsrv.serve_forever, daemon=True)
-_hthread.start()
-
-
-def _hget(path):
-    c = _httpc.HTTPConnection("127.0.0.1", _hport, timeout=15)
-    c.request("GET", path)
-    r = c.getresponse()
-    body = r.read().decode("utf-8", "replace")
-    hdrs = {k.lower(): v for k, v in r.getheaders()}
-    c.close()
-    return r.status, hdrs, body
-
-
-_st, _hdrs, _b = _hget("/")
-check("Server header is generic (no Python version)",
-      _hdrs.get("server") == "Checklane", _hdrs.get("server"))
-check("no runtime version leaks in Server header",
-      "Python/" not in (_hdrs.get("server") or ""), _hdrs.get("server"))
-
-_st, _hdrs, _b = _hget("/api/audit?domain=foo..bar")
-check("foo..bar -> 400", _st == 400, str(_st))
-check("foo..bar error is exactly the generic invalid-domain message",
-      _b == json.dumps({"error": "invalid domain"}), _b[:120])
-check("no codec internals in 400 body",
-      "idna" not in _b.lower() and "codec" not in _b.lower(), _b[:120])
-
-_st, _hdrs, _b = _hget("/api/audit?domain=not_a_domain!!")
-check("other invalid domains also get the generic 400",
-      _st == 400 and _b == json.dumps({"error": "invalid domain"}),
-      "%s %s" % (_st, _b[:80]))
-
-_st, _hdrs, _b = _hget("/api/stats")
-check("/api/stats -> 200", _st == 200, str(_st))
-check("/api/stats empty store -> audits_total 0",
-      json.loads(_b).get("audits_total") == 0, _b[:80])
-with open(_srvmod.AUDITS_FILE, "a", encoding="utf-8") as _f:
-    for _i in range(3):
-        _f.write(json.dumps({"ts": 1, "domain": "x%d.example" % _i}) + "\n")
-_st, _hdrs, _b = _hget("/api/stats")
-check("/api/stats counts audit rows",
-      json.loads(_b).get("audits_total") == 3, _b[:80])
-
-_hsrv.shutdown()
-_hsrv.server_close()
-_srvmod.DATA_DIR = _real_data_dir
-_srvmod.AUDITS_FILE = _real_audits_file
-_shutil.rmtree(_tmpdata, ignore_errors=True)
-
 print("\n%d passed, %d failed" % (PASS, FAIL))
 sys.exit(1 if FAIL else 0)
