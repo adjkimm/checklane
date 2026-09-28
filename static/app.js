@@ -2,12 +2,7 @@
 (function () {
   "use strict";
 
-  var FREEMAIL = { "gmail.com": 1, "yahoo.com": 1, "hotmail.com": 1, "outlook.com": 1,
-    "aol.com": 1, "icloud.com": 1, "live.com": 1, "msn.com": 1,
-    "protonmail.com": 1, "pm.me": 1 };
-
   var currentReport = null;
-  var currentLeadId = null;
   var statusTimer = null;
 
   function $(id) { return document.getElementById(id); }
@@ -16,11 +11,6 @@
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
     });
-  }
-
-  function isFreemail(email) {
-    var parts = String(email).toLowerCase().split("@");
-    return parts.length === 2 && !!FREEMAIL[parts[1]];
   }
 
   /* ---------------- score ring ---------------- */
@@ -37,11 +27,52 @@
       '</svg>';
   }
 
+  var PRICE_DISPLAY = "$29"; // updated from /api/config on load
+
   /* ---------------- report rendering ---------------- */
+  /* Free version: the main score only. The full report unlocks after payment,
+     or visitors can send a message for a personal walkthrough. */
+  function buyBox(domain) {
+    return '<div class="gate"><h3>Get the full report</h3>' +
+      "<p>Your score is free. The full report has every check and every fix, " +
+      "ranked by what matters most for <strong>" + esc(domain) + "</strong>.</p>" +
+      '<button type="button" class="btn btn-large" id="buy-btn">Buy the full report &mdash; ' +
+      esc(PRICE_DISPLAY) + "</button>" +
+      '<p class="micro">Secure payment via Stripe. Your report unlocks instantly.</p>' +
+      '<div class="field-err" id="buy-err"></div></div>';
+  }
+
+  function messageBox(domain) {
+    return '<div class="gate gate-alt"><h3>Questions first?</h3>' +
+      "<p>Send us a message and we&rsquo;ll walk you through your score personally.</p>" +
+      '<form id="message-form" autocomplete="on">' +
+      '<div class="row2"><div><label for="message-name">Your name</label>' +
+      '<input id="message-name" name="name" type="text" placeholder="Jordan Lee"></div>' +
+      "<div><label for='message-email'>Email</label>" +
+      '<input id="message-email" name="email" type="email" placeholder="you@yourstore.com"></div></div>' +
+      '<div><label for="message-text">Message</label>' +
+      '<textarea id="message-text" name="message" placeholder="What would you like to know about your score?"></textarea></div>' +
+      '<div class="field-err" id="message-err"></div>' +
+      '<button type="submit" class="btn">Send message</button></form>' +
+      '<p class="micro" id="message-done" hidden>Message sent &mdash; we&rsquo;ll get back to you soon.</p></div>';
+  }
+
+  function scoreCard(report, minimal) {
+    var ctas = minimal ? "" : buyBox(report.domain) + messageBox(report.domain);
+    return '<div class="report-card">' +
+      '<div class="score-row">' + scoreRing(report.score) +
+      '<div class="score-meta"><h3><span class="grade grade-' + report.grade + '">' +
+      report.grade + "</span>" + esc(report.domain) + "</h3>" +
+      "<p>" + esc(report.summary) + "</p></div></div>" +
+      ctas +
+      "</div>";
+  }
+
+  /* Paid view: the complete report. Only rendered after Stripe verification. */
   function renderCategories(report) {
-    return report.categories.map(function (cat) {
+    return (report.categories || []).map(function (cat) {
       var pct = cat.max ? Math.round(100 * cat.score / cat.max) : 0;
-      var checks = cat.checks.map(function (ch) {
+      var checks = (cat.checks || []).map(function (ch) {
         var pill = '<span class="pill pill-' + ch.status + '">' + ch.status + "</span>";
         var fix = ch.fix ? '<p class="cfix"><strong>Fix:</strong> ' + esc(ch.fix) + "</p>" : "";
         return '<div class="check-row"><span class="cname">' + esc(ch.name) + "</span>" + pill +
@@ -64,52 +95,17 @@
     }).join("") + "</ul>";
   }
 
-  function reportCard(report, opts) {
-    opts = opts || {};
-    var top3 = (report.fixes || []).slice(0, 3);
-    var preview = top3.length
-      ? "<h4>Your top fixes</h4><ul class='fix-preview'>" + top3.map(function (f) {
-          return "<li><span class='sev sev-" + f.severity + "'>" + f.severity + "</span>" +
-            "<strong>" + esc(f.check) + ".</strong> " + esc(f.fix) + "</li>";
-        }).join("") + "</ul>"
-      : "";
-    var body = '<div class="report-card">' +
+  function fullReportCard(report) {
+    return '<div class="report-card">' +
       '<div class="score-row">' + scoreRing(report.score) +
       '<div class="score-meta"><h3><span class="grade grade-' + report.grade + '">' +
       report.grade + "</span>" + esc(report.domain) + "</h3>" +
       "<p>" + esc(report.summary) + "</p></div></div>" +
-      renderCategories(report);
-    if (!opts.full) {
-      body += preview;
-      body += '<div class="gate"><h3>Unlock your full report</h3>' +
-        "<p>Drop your details and we&rsquo;ll unlock every check plus your complete " +
-        "fix list for <strong>" + esc(report.domain) + "</strong>, ranked by what " +
-        "matters most.</p>" +
-        '<form id="lead-form" autocomplete="on">' +
-        '<div><label for="lead-name">Your name</label>' +
-        '<input id="lead-name" name="name" type="text" placeholder="Jordan Lee"></div>' +
-        '<div class="row2"><div><label for="lead-business">Business name</label>' +
-        '<input id="lead-business" name="business" type="text" placeholder="Blue Pine Goods"></div>' +
-        "<div><label for='lead-email'>Work email</label>" +
-        '<input id="lead-email" name="email" type="email" placeholder="you@yourstore.com"></div></div>' +
-        '<div id="freemail-hint" class="freemail-hint" hidden>Quick heads-up: use your ' +
-        "store email (like you@yourstore.com) &mdash; a Gmail or Yahoo address " +
-        "won&rsquo;t count as a verified store.</div>" +
-        '<div class="field-err" id="lead-err"></div>' +
-        '<button type="submit" class="btn">Unlock full report</button></form></div>';
-    } else {
-      body += "<h4>Your fix list</h4>" + renderFixes(report);
-      body += '<div class="beta-box"><h3>Founding merchant beta</h3>' +
-        "<p>Ongoing checks that AI shoppers can still find your products, alerts " +
-        "when AI visits your store, and a Checklane badge proving your store is " +
-        "AI-ready.</p>" +
-        '<label class="opt"><input type="checkbox" id="beta-opt"> ' +
-        "<span><strong>Notify me</strong> when the founding-merchant beta opens.</span></label>" +
-        '<button class="btn" id="beta-btn">Request beta invite</button>' +
-        '<p class="micro" id="beta-done" hidden style="color:#9fd9cd">You&rsquo;re on the list. ' +
-        "We&rsquo;ll reach out when the beta opens.</p></div>";
-    }
-    return body + "</div>";
+      "<h4>Your full report</h4>" +
+      renderCategories(report) +
+      "<h4>Your fix list</h4>" +
+      renderFixes(report) +
+      "</div>";
   }
 
   /* ---------------- audit flow ---------------- */
@@ -150,10 +146,10 @@
           return;
         }
         currentReport = res.j;
-        currentLeadId = null;
         resultEl.hidden = false;
-        resultEl.innerHTML = reportCard(currentReport, { full: false });
-        wireLeadForm();
+        resultEl.innerHTML = scoreCard(currentReport);
+        wireBuyButton();
+        wireMessageForm();
         resultEl.scrollIntoView({ behavior: "smooth", block: "start" });
       })
       .catch(function (err) {
@@ -165,25 +161,56 @@
       });
   }
 
-  function wireLeadForm() {
-    var form = $("lead-form");
-    if (!form) return;
-    var emailInput = $("lead-email");
-    emailInput.addEventListener("input", function () {
-      $("freemail-hint").hidden = !isFreemail(emailInput.value);
+  function wireBuyButton() {
+    var btn = $("buy-btn");
+    if (!btn) return;
+    btn.addEventListener("click", function () {
+      btn.disabled = true;
+      var label = btn.innerHTML;
+      btn.textContent = "Opening secure checkout\u2026";
+      $("buy-err").textContent = "";
+      fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          report_token: currentReport ? currentReport.report_token : ""
+        })
+      })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (res) {
+          if (!res.ok || !res.j.url) {
+            btn.disabled = false;
+            btn.innerHTML = label;
+            $("buy-err").textContent = (res.j && res.j.error) ||
+              "couldn't start checkout — please try again";
+            return;
+          }
+          window.location.href = res.j.url;
+        })
+        .catch(function (err) {
+          btn.disabled = false;
+          btn.innerHTML = label;
+          $("buy-err").textContent = "Something went wrong: " + err;
+        });
     });
+  }
+
+  function wireMessageForm() {
+    var form = $("message-form");
+    if (!form) return;
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       var btn = form.querySelector("button[type=submit]");
       btn.disabled = true;
-      $("lead-err").textContent = "";
+      btn.textContent = "Sending\u2026";
+      $("message-err").textContent = "";
       var payload = {
-        name: $("lead-name").value,
-        business: $("lead-business").value,
-        email: $("lead-email").value,
-        domain: currentReport.domain
+        name: $("message-name").value,
+        email: $("message-email").value,
+        message: $("message-text").value,
+        domain: currentReport ? currentReport.domain : ""
       };
-      fetch("/api/lead", {
+      fetch("/api/message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -191,53 +218,32 @@
         .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
         .then(function (res) {
           btn.disabled = false;
+          btn.textContent = "Send message";
           if (!res.ok) {
             var f = (res.j && res.j.fields) || {};
-            var first = f.name || f.business || f.email || f.domain ||
+            var first = f.name || f.email || f.message ||
               (res.j && res.j.error) || "please check the form";
-            $("lead-err").textContent = first;
+            $("message-err").textContent = first;
             return;
           }
-          currentLeadId = res.j.lead_id;
-          var note = res.j.note
-            ? '<p class="micro" style="color:#7a5c14">' + esc(res.j.note) + "</p>" : "";
-          $("audit-result").innerHTML = note + reportCard(currentReport, { full: true });
-          wireBetaBox();
-          $("audit-result").scrollIntoView({ behavior: "smooth", block: "start" });
+          form.hidden = true;
+          $("message-done").hidden = false;
         })
         .catch(function (err) {
           btn.disabled = false;
-          $("lead-err").textContent = "Something went wrong: " + err;
+          btn.textContent = "Send message";
+          $("message-err").textContent = "Something went wrong: " + err;
         });
-    });
-  }
-
-  function wireBetaBox() {
-    var btn = $("beta-btn");
-    if (!btn) return;
-    btn.addEventListener("click", function () {
-      if (!$("beta-opt").checked) {
-        btn.textContent = "Tick the box first";
-        setTimeout(function () { btn.textContent = "Request beta invite"; }, 1600);
-        return;
-      }
-      btn.disabled = true;
-      fetch("/api/beta", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lead_id: currentLeadId })
-      }).then(function () {
-        $("beta-done").hidden = false;
-        btn.textContent = "Invite requested";
-      }).catch(function () {
-        btn.disabled = false;
-        btn.textContent = "Try again";
-      });
     });
   }
 
   /* ---------------- init ---------------- */
   document.addEventListener("DOMContentLoaded", function () {
+    // Public config (report price). Falls back to the $29 default above.
+    fetch("/api/config").then(function (r) { return r.json(); }).then(function (cfg) {
+      if (cfg && cfg.price_display) PRICE_DISPLAY = cfg.price_display;
+    }).catch(function () {});
+
     $("audit-form").addEventListener("submit", function (e) {
       e.preventDefault();
       var d = $("audit-domain").value.trim();
@@ -245,11 +251,71 @@
       runAudit(d);
     });
 
-    // Anonymized sample report (static JSON, rendered read-only).
+    // Beta waiting list form (landing-page section).
+    var betaForm = $("beta-form");
+    if (betaForm) {
+      betaForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var btn = betaForm.querySelector("button[type=submit]");
+        btn.disabled = true;
+        $("beta-err").textContent = "";
+        fetch("/api/beta", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: $("beta-name").value,
+            email: $("beta-email").value
+          })
+        })
+          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+          .then(function (res) {
+            btn.disabled = false;
+            if (!res.ok) {
+              var f = (res.j && res.j.fields) || {};
+              var first = f.name || f.email ||
+                (res.j && res.j.error) || "please check the form";
+              $("beta-err").textContent = first;
+              return;
+            }
+            betaForm.hidden = true;
+            $("beta-done").hidden = false;
+          })
+          .catch(function (err) {
+            btn.disabled = false;
+            $("beta-err").textContent = "Something went wrong: " + err;
+          });
+      });
+    }
+
+    // Returning from Stripe Checkout after a completed payment.
+    var params = new URLSearchParams(window.location.search);
+    var sessionId = params.get("session_id");
+    if (params.get("paid") && sessionId) {
+      var resultEl = $("audit-result");
+      resultEl.hidden = false;
+      resultEl.innerHTML = '<div class="report-card"><p class="loading">' +
+        "Payment confirmed &mdash; loading your full report&hellip;</p></div>";
+      window.history.replaceState({}, "", "/");
+      fetch("/api/report?session_id=" + encodeURIComponent(sessionId))
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (res) {
+          if (!res.ok || res.j.error) {
+            resultEl.innerHTML = '<div class="err"><strong>Couldn&rsquo;t load your report:</strong> ' +
+              esc((res.j && res.j.error) || "unknown error") + "</div>";
+            return;
+          }
+          resultEl.innerHTML = fullReportCard(res.j);
+          resultEl.scrollIntoView({ behavior: "smooth", block: "start" });
+        })
+        .catch(function (err) {
+          resultEl.innerHTML = '<div class="err"><strong>Couldn&rsquo;t load your report:</strong> ' +
+            esc(String(err)) + "</div>";
+        });
+    }
+
+    // Anonymized sample report (static JSON, rendered read-only, score only).
     fetch("/sample-report").then(function (r) { return r.json(); }).then(function (rep) {
-      $("sample-report").innerHTML = reportCard(rep, { full: true });
-      var beta = $("sample-report").querySelector(".beta-box");
-      if (beta) beta.remove(); // sample has no beta CTA
+      $("sample-report").innerHTML = scoreCard(rep, true);
     }).catch(function () {
       $("sample-report").innerHTML = '<p class="loading">The sample report isn\u2019t loading right now.</p>';
     });

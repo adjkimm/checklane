@@ -6,7 +6,11 @@ Serves the landing page + audit widget API locally:
   GET  /                        -> landing page
   GET  /static/<path>            -> static assets
   GET  /sample-report            -> anonymized sample audit (static JSON)
-  GET  /api/audit?domain=X       -> run live audit (JSON report)
+  GET  /api/audit?domain=X       -> run live audit (score-only JSON + report_token)
+  GET  /api/config               -> public config (report price display)
+  GET  /api/report?session_id=X  -> full report after verified Stripe payment
+  POST /api/checkout             -> create Stripe Checkout Session {report_token}
+  POST /api/message              -> visitor message (JSON body), emailed via Resend
   POST /api/lead                 -> capture lead (JSON body), returns lead_id
   POST /api/beta                 -> record beta waitlist opt-in {lead_id}
   GET  /api/stats                -> local counters (audits, leads, beta opt-ins)
@@ -75,6 +79,52 @@ def log_event(kind, obj):
 NOTIFY_EMAIL = os.environ.get("NOTIFY_EMAIL", "adjkimm@gmail.com")
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 
+# --- Paid full reports (Stripe Checkout) ---------------------------------- #
+STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
+REPORT_PRICE_CENTS = int(os.environ.get("REPORT_PRICE_CENTS", "2900"))
+REPORT_CURRENCY = os.environ.get("REPORT_CURRENCY", "usd")
+BASE_URL = os.environ.get("BASE_URL", "https://getchecklane.com")
+PURCHASES_FILE = os.path.join(DATA_DIR, "purchases.jsonl")
+
+# In-memory cache: report_token -> (full report dict, timestamp).
+# Lets /api/report serve the paid report without re-running the audit.
+REPORT_CACHE = {}
+REPORT_TTL_S = 2 * 3600
+
+
+def price_display():
+    if REPORT_PRICE_CENTS % 100 == 0:
+        return "$%d" % (REPORT_PRICE_CENTS // 100)
+    return "$%.2f" % (REPORT_PRICE_CENTS / 100)
+
+
+def prune_report_cache():
+    now = time.time()
+    for token in [t for t, (_, ts) in REPORT_CACHE.items()
+                  if now - ts > REPORT_TTL_S]:
+        del REPORT_CACHE[token]
+
+
+def stripe_api(method, path, params=None):
+    """Minimal Stripe REST client (stdlib only). Raises on failure."""
+    import urllib.request
+    import urllib.parse
+    if not STRIPE_SECRET_KEY:
+        raise RuntimeError("STRIPE_SECRET_KEY is not set")
+    data = None
+    headers = {"Authorization": "Bearer " + STRIPE_SECRET_KEY}
+    if params is not None:
+        data = urllib.parse.urlencode(params).encode("utf-8")
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+    req = urllib.request.Request("https://api.stripe.com" + path, data=data,
+                                 headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", "replace")[:200]
+        raise RuntimeError("stripe %s: %s" % (e.code, detail))
+
 
 def send_notification(subject, body):
     """Email the Principal about a lead/beta event via Resend.
@@ -124,15 +174,15 @@ def notify_lead(lead):
         "New Checklane lead: {business} ({domain})".format(**lead), body)
 
 
-def notify_beta(lead):
+def notify_beta_signup(entry):
+    when = time.strftime("%Y-%m-%d %H:%M PT", time.localtime(entry["ts"]))
     body = (
-        "Beta waitlist opt-in for lead {id}:\n\n"
-        "Name:     {name}\n"
-        "Business: {business}\n"
-        "Email:    {email}\n"
-    ).format(**lead)
+        "New Checklane beta waiting-list signup — {when}\n\n"
+        "Name:  {name}\n"
+        "Email: {email}\n"
+    ).format(when=when, **entry)
     send_notification(
-        "Checklane beta opt-in: {business}".format(**lead), body)
+        "Checklane beta waiting list: {name}".format(**entry), body)
 
 
 def read_jsonl(path):
@@ -220,18 +270,70 @@ class Handler(BaseHTTPRequestHandler):
                 "score": report.get("score"),
                 "grade": report.get("grade"),
             })
+            # Free tier: score only. Full report is cached server-side and
+            # served via /api/report after a verified Stripe payment.
+            prune_report_cache()
+            token = uuid.uuid4().hex
+            REPORT_CACHE[token] = (report, time.time())
+            return self._json(200, {
+                "domain": report.get("domain"),
+                "score": report.get("score"),
+                "grade": report.get("grade"),
+                "summary": report.get("summary"),
+                "engine": report.get("engine"),
+                "duration_s": report.get("duration_s"),
+                "report_token": token,
+            })
+        if path == "/api/config":
+            return self._json(200, {
+                "price_cents": REPORT_PRICE_CENTS,
+                "currency": REPORT_CURRENCY,
+                "price_display": price_display(),
+                "stripe_configured": bool(STRIPE_SECRET_KEY),
+            })
+        if path == "/api/report":
+            # Paid full report. Verifies the Stripe Checkout Session
+            # server-side, then serves the cached full audit.
+            session_id = (qs.get("session_id") or [""])[0].strip()
+            if not session_id.startswith("cs_"):
+                return self._json(400, {"error": "invalid checkout session"})
+            try:
+                session = stripe_api(
+                    "GET", "/v1/checkout/sessions/" + session_id)
+            except Exception as e:
+                return self._json(502, {"error": "couldn't verify payment"})
+            if session.get("payment_status") != "paid":
+                return self._json(402, {"error": "payment not completed yet"})
+            meta = session.get("metadata") or {}
+            token = str(meta.get("report_token", ""))
+            entry = REPORT_CACHE.get(token)
+            if not entry:
+                return self._json(410, {
+                    "error": "this report expired — please re-run the free audit"})
+            report = entry[0]
+            append_jsonl(PURCHASES_FILE, {
+                "ts": int(time.time()),
+                "session_id": session_id,
+                "domain": report.get("domain"),
+                "score": report.get("score"),
+                "amount_cents": session.get("amount_total"),
+                "currency": session.get("currency"),
+            })
+            log_event("purchase", {"domain": report.get("domain"),
+                                   "score": report.get("score")})
             return self._json(200, report)
         if path == "/api/stats":
             audits = read_jsonl(AUDITS_FILE)
             leads = read_jsonl(LEADS_FILE)
             betas = read_jsonl(BETA_FILE)
-            beta_ids = {b.get("lead_id") for b in betas}
+            purchases = read_jsonl(PURCHASES_FILE)
             verifiable = [l for l in leads if not l.get("freemail")]
             return self._json(200, {
                 "audits_run": len(audits),
                 "leads": len(leads),
                 "verifiable_leads": len(verifiable),
-                "beta_optins": len(beta_ids),
+                "beta_waitlist": len(betas),
+                "purchases": len(purchases),
             })
         return self._not_found()
 
@@ -284,14 +386,77 @@ class Handler(BaseHTTPRequestHandler):
             })
 
         if path == "/api/beta":
-            lead_id = str(data.get("lead_id", "")).strip()
-            leads = {l.get("id"): l for l in read_jsonl(LEADS_FILE)}
-            if not lead_id or lead_id not in leads:
-                return self._json(400, {"error": "unknown lead_id"})
-            append_jsonl(BETA_FILE, {"ts": int(time.time()), "lead_id": lead_id})
-            log_event("beta", {"lead_id": lead_id})
-            notify_beta(leads[lead_id])
+            # Beta waiting list: direct name + email signup.
+            name = str(data.get("name", "")).strip()
+            email = str(data.get("email", "")).strip().lower()
+            errors = {}
+            if len(name) < 2:
+                errors["name"] = "please enter your name"
+            if not EMAIL_RE.match(email):
+                errors["email"] = "please enter a valid email address"
+            if errors:
+                return self._json(400, {"error": "invalid fields", "fields": errors})
+            entry = {"ts": int(time.time()), "name": name, "email": email,
+                     "id": uuid.uuid4().hex[:12]}
+            append_jsonl(BETA_FILE, entry)
+            log_event("beta", {"id": entry["id"]})
+            notify_beta_signup(entry)
             return self._json(200, {"ok": True})
+
+        if path == "/api/message":
+            name = str(data.get("name", "")).strip()
+            email = str(data.get("email", "")).strip().lower()
+            message = str(data.get("message", "")).strip()
+            domain = str(data.get("domain", "")).strip()
+            errors = {}
+            if len(name) < 2:
+                errors["name"] = "please enter your name"
+            if not EMAIL_RE.match(email):
+                errors["email"] = "please enter a valid email address"
+            if len(message) < 10:
+                errors["message"] = "please write a few words so we know how to help"
+            if len(message) > 2000:
+                errors["message"] = "please keep it under 2000 characters"
+            if errors:
+                return self._json(400, {"error": "invalid fields", "fields": errors})
+            body = ("New Checklane message\n\n"
+                    "Name:   {name}\n"
+                    "Email:  {email}\n"
+                    "Store:  {domain}\n\n"
+                    "{message}\n").format(
+                        name=name, email=email,
+                        domain=domain or "(no store checked)", message=message)
+            send_notification("Checklane message from %s" % name, body)
+            log_event("message", {"domain": domain or None})
+            return self._json(200, {"ok": True})
+
+        if path == "/api/checkout":
+            # Creates a Stripe Checkout Session for the full report.
+            # The report_token links the paid session back to the cached audit.
+            token = str(data.get("report_token", "")).strip()
+            entry = REPORT_CACHE.get(token)
+            if not entry:
+                return self._json(400, {
+                    "error": "report expired — please re-run the free audit"})
+            domain = entry[0].get("domain") or "your store"
+            try:
+                session = stripe_api("POST", "/v1/checkout/sessions", {
+                    "mode": "payment",
+                    "success_url": BASE_URL + "/?paid=1&session_id={CHECKOUT_SESSION_ID}",
+                    "cancel_url": BASE_URL + "/",
+                    "line_items[0][price_data][currency]": REPORT_CURRENCY,
+                    "line_items[0][price_data][product_data][name]":
+                        "Checklane full report — " + domain,
+                    "line_items[0][price_data][unit_amount]": str(REPORT_PRICE_CENTS),
+                    "line_items[0][quantity]": "1",
+                    "metadata[report_token]": token,
+                    "metadata[domain]": domain,
+                })
+            except Exception as e:
+                return self._json(502, {
+                    "error": "couldn't start checkout (%s)" % str(e)[:100]})
+            log_event("checkout_created", {"domain": domain})
+            return self._json(200, {"ok": True, "url": session.get("url")})
 
         return self._not_found()
 

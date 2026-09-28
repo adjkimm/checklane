@@ -105,10 +105,20 @@ body {
 .gate label { font-size: .9rem; font-weight: 600; }
 .gate input { padding: 10px 12px; font-size: 1rem; border: 1px solid var(--line);
   border-radius: 8px; width: 100%; }
+.gate textarea { padding: 10px 12px; font-size: 1rem; border: 1px solid var(--line);
+  border-radius: 8px; width: 100%; min-height: 88px; font-family: inherit;
+  resize: vertical; }
 .gate .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.gate-alt { background: var(--card); border: 1px solid var(--line); }
 .field-err { color: var(--bad); font-size: .82rem; min-height: 1.2em; }
-.freemail-hint { background: #fbf3dd; border: 1px solid #ecd9a0; color: #7a5c14;
-  border-radius: 8px; padding: 10px 12px; font-size: .88rem; }
+
+/* beta waiting list */
+.beta-form { display: flex; gap: 10px; max-width: 680px; }
+.beta-form input { flex: 1; padding: 12px 14px; font-size: 1rem;
+  border: 2px solid var(--line); border-radius: 8px; }
+.beta-form input:focus { outline: none; border-color: var(--accent); }
+.beta-form .btn { flex: none; }
+#beta-done { font-weight: 600; color: var(--good); }
 
 .check-row { padding: 12px 0; border-top: 1px solid var(--line); }
 .check-row .cname { font-weight: 600; font-size: .95rem; }
@@ -120,15 +130,6 @@ body {
 .check-row .cdetail { color: var(--muted); font-size: .9rem; margin: 4px 0 0; }
 .check-row .cfix { font-size: .9rem; margin: 6px 0 0; background: var(--alt);
   border-left: 3px solid var(--accent); padding: 8px 12px; border-radius: 0 6px 6px 0; }
-
-.beta-box { margin-top: 24px; background: var(--ink); color: #e7edf3;
-  border-radius: var(--radius); padding: 28px; }
-.beta-box h3 { margin: 0 0 8px; color: #fff; }
-.beta-box .price { font-size: 1.6rem; font-weight: 700; color: #fff; }
-.beta-box p { color: #b9c6d3; }
-.beta-box label.opt { display: flex; gap: 10px; align-items: flex-start;
-  margin: 14px 0; cursor: pointer; color: #e7edf3; }
-.beta-box input[type=checkbox] { margin-top: 4px; transform: scale(1.2); }
 
 /* checks + faq */
 .checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
