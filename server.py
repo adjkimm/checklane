@@ -81,7 +81,7 @@ RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 
 # --- Paid full reports (Stripe Checkout) ---------------------------------- #
 STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
-REPORT_PRICE_CENTS = int(os.environ.get("REPORT_PRICE_CENTS", "2900"))
+REPORT_PRICE_CENTS = int(os.environ.get("REPORT_PRICE_CENTS", "900"))
 REPORT_CURRENCY = os.environ.get("REPORT_CURRENCY", "usd")
 BASE_URL = os.environ.get("BASE_URL", "https://getchecklane.com")
 PURCHASES_FILE = os.path.join(DATA_DIR, "purchases.jsonl")

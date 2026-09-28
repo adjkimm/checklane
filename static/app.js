@@ -27,7 +27,7 @@
       '</svg>';
   }
 
-  var PRICE_DISPLAY = "$29"; // updated from /api/config on load
+  var PRICE_DISPLAY = "$9"; // updated from /api/config on load
 
   /* ---------------- report rendering ---------------- */
   /* Free version: the main score only. The full report unlocks after payment,
