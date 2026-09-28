@@ -287,6 +287,47 @@
       });
     }
 
+    // Services message form (landing-page section) -> /api/message.
+    var svcForm = $("svc-form");
+    if (svcForm) {
+      svcForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var btn = svcForm.querySelector("button[type=submit]");
+        btn.disabled = true;
+        btn.textContent = "Sending\u2026";
+        $("svc-err").textContent = "";
+        fetch("/api/message", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: $("svc-name").value,
+            email: $("svc-email").value,
+            message: $("svc-text").value,
+            domain: ""
+          })
+        })
+          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+          .then(function (res) {
+            btn.disabled = false;
+            btn.textContent = "Message us";
+            if (!res.ok) {
+              var f = (res.j && res.j.fields) || {};
+              var first = f.name || f.email || f.message ||
+                (res.j && res.j.error) || "please check the form";
+              $("svc-err").textContent = first;
+              return;
+            }
+            svcForm.hidden = true;
+            $("svc-done").hidden = false;
+          })
+          .catch(function (err) {
+            btn.disabled = false;
+            btn.textContent = "Message us";
+            $("svc-err").textContent = "Something went wrong: " + err;
+          });
+      });
+    }
+
     // Returning from Stripe Checkout after a completed payment.
     var params = new URLSearchParams(window.location.search);
     var sessionId = params.get("session_id");
