@@ -31,7 +31,7 @@
 
   /* ---------------- report rendering ---------------- */
   /* Free version: the main score only. The full report unlocks after payment,
-     or visitors can send a message for a personal walkthrough. */
+     or visitors can send a pre-sales question through the message box. */
   function buyBox(domain) {
     return '<div class="gate"><h3>Get the full report</h3>' +
       "<p>Your score is free. The full report has every check and every fix, " +
@@ -41,16 +41,16 @@
       '<li><span class="sev sev-medium">Medium</span> Publish your sitemap <span class="redact">████████</span></li>' +
       '<li><span class="sev sev-low">Low</span> Fix canonical links <span class="redact">██████</span></li></ul>' +
       '<p class="micro">The full report names every check and ranks every fix.</p></div>' +
-      '<button type="button" class="btn btn-large" id="buy-btn">Buy the full report &mdash; ' +
+      '<button type="button" class="btn btn-large" id="buy-btn">Buy the full report: ' +
       esc(PRICE_DISPLAY) + "</button>" +
-      '<p class="micro">Secure payment via Stripe. Your report opens right after payment, and a receipt with the report link is emailed to you &mdash; if you close the tab, use the email link or the &ldquo;lost your report?&rdquo; link below. 7-day satisfaction guarantee: not happy? Full refund, no questions asked. <a href="/refund">Read the guarantee</a>.</p>' +
+      '<p class="micro">Secure payment via Stripe. Your report opens right after payment, and a receipt with the report link is emailed to you. If you close the tab, use the email link or the &ldquo;lost your report?&rdquo; link below. 7-day satisfaction guarantee: not happy? Full refund, no questions asked. <a href="/refund">Read the guarantee</a>.</p>' +
       '<p class="micro">Lost your report? <a href="/lost-report">Get it re-sent</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/refund">Refund policy</a></p>' +
       '<div class="field-err" id="buy-err"></div></div>';
   }
 
   function messageBox(domain) {
     return '<div class="gate gate-alt"><h3>Questions first?</h3>' +
-      "<p>Send us a message and we&rsquo;ll walk you through your score personally.</p>" +
+      "<p>Have a question before you buy? Send us a message and we&rsquo;ll get back to you.</p>" +
       '<form id="message-form" autocomplete="on">' +
       '<div class="row2"><div><label for="message-name">Your name</label>' +
       '<input id="message-name" name="name" type="text" placeholder="Jordan Lee"></div>' +
@@ -60,7 +60,7 @@
       '<textarea id="message-text" name="message" placeholder="What would you like to know about your score?"></textarea></div>' +
       '<div class="field-err" id="message-err"></div>' +
       '<button type="submit" class="btn">Send message</button></form>' +
-      '<p class="micro" id="message-done" hidden>Message sent &mdash; we&rsquo;ll get back to you soon.</p></div>';
+      '<p class="micro" id="message-done" hidden>Message sent. We&rsquo;ll get back to you soon.</p></div>';
   }
 
   function scoreCard(report, minimal) {
@@ -90,7 +90,14 @@
   function setStatus(i) {
     var el = $("audit-status");
     el.hidden = false;
-    el.innerHTML = "<strong>Checking your store\u2026</strong> " + esc(STATUS_LINES[i % STATUS_LINES.length]);
+    el.innerHTML =
+      '<div class="loading-card">' +
+      '<div class="spinner" aria-hidden="true"></div>' +
+      '<h3>Checking your store\u2026</h3>' +
+      '<div class="progress-track" aria-hidden="true"><div class="progress-bar"></div></div>' +
+      '<p class="status-line">' + esc(STATUS_LINES[i % STATUS_LINES.length]) + '</p>' +
+      '<p class="micro">This usually takes about a minute.</p>' +
+      '</div>';
   }
 
   function runAudit(domain) {
@@ -101,7 +108,7 @@
     var i = 0;
     setStatus(i);
     clearInterval(statusTimer);
-    statusTimer = setInterval(function () { i++; setStatus(i); }, 6000);
+    statusTimer = setInterval(function () { i++; setStatus(i); }, 4000);
 
     fetch("/api/audit?domain=" + encodeURIComponent(domain))
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
@@ -151,7 +158,7 @@
             btn.disabled = false;
             btn.innerHTML = label;
             $("buy-err").textContent = (res.j && res.j.error) ||
-              "couldn't start checkout — please try again";
+              "couldn't start checkout. Please try again";
             return;
           }
           window.location.href = res.j.url;
