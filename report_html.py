@@ -295,7 +295,8 @@ _CSS = """
   .score-ring .num{font-size:38px; font-weight:800; line-height:1}
   .score-ring .den{font-size:13px; color:var(--muted)}
   .score-summary{min-width:0}
-  .score-summary h2{margin:0 0 6px; font-size:22px}  .grade{display:inline-block; color:#fff; font-weight:800;
+  .score-summary h2{margin:0 0 6px; font-size:22px}
+  .grade{display:inline-block; color:#fff; font-weight:800;
     border-radius:8px; padding:2px 12px; font-size:15px; margin-left:8px; vertical-align:middle}
   .score-summary p{margin:6px 0 0; color:#44403c; font-size:15px}
   main{padding:8px 36px 36px}
