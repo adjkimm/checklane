@@ -784,10 +784,6 @@ def render_report(report):
     %s
   </main>
   <footer>
-    <strong>Checklane</strong> grades what's technically verifiable about your site
-    at audit time. This report is a roadmap, not a promise. A high score means
-    nothing technical stands between you and the AI shopper; the rest is up to your
-    products, prices, and reputation.<br>
     Scoring updated Sep 2026: we now grade AI discoverability too, so this score
     isn't directly comparable to audits run before then.
   </footer>
