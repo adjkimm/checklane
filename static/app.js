@@ -55,7 +55,7 @@
       '<div class="row2"><div><label for="message-name">Your name</label>' +
       '<input id="message-name" name="name" type="text" placeholder="Jordan Lee"></div>' +
       "<div><label for='message-email'>Email</label>" +
-      '<input id="message-email" name="email" type="email" placeholder="you@yourstore.com"></div></div>' +
+      '<input id="message-email" name="email" type="email" placeholder="you@yoursite.com"></div></div>' +
       '<div><label for="message-text">Message</label>' +
       '<textarea id="message-text" name="message" placeholder="What would you like to know about your score?"></textarea></div>' +
       '<div class="field-err" id="message-err"></div>' +
@@ -94,7 +94,7 @@
     el.innerHTML =
       '<div class="loading-card">' +
       '<div class="spinner" aria-hidden="true"></div>' +
-      '<h3>Checking your store\u2026</h3>' +
+      '<h3>Checking your site\u2026</h3>' +
       '<div class="progress-track" aria-hidden="true"><div class="progress-bar"></div></div>' +
       '<p class="status-line">' + esc(STATUS_LINES[i % STATUS_LINES.length]) + '</p>' +
       '<p class="micro">This usually takes about a minute.</p>' +
@@ -118,7 +118,7 @@
         statusEl.hidden = true;
         if (!res.ok || res.j.error) {
           resultEl.hidden = false;
-          resultEl.innerHTML = '<div class="err"><strong>Couldn\u2019t check your store:</strong> ' +
+          resultEl.innerHTML = '<div class="err"><strong>Couldn\u2019t check your site:</strong> ' +
             esc((res.j && res.j.error) || "unknown error") + "</div>";
           return;
         }
@@ -133,7 +133,7 @@
         clearInterval(statusTimer);
         statusEl.hidden = true;
         resultEl.hidden = false;
-        resultEl.innerHTML = '<div class="err"><strong>Couldn\u2019t check your store:</strong> ' +
+        resultEl.innerHTML = '<div class="err"><strong>Couldn\u2019t check your site:</strong> ' +
           esc(String(err)) + "</div>";
       });
   }
