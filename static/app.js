@@ -68,45 +68,8 @@
       "</div>";
   }
 
-  /* Paid view: the complete report. Only rendered after Stripe verification. */
-  function renderCategories(report) {
-    return (report.categories || []).map(function (cat) {
-      var pct = cat.max ? Math.round(100 * cat.score / cat.max) : 0;
-      var checks = (cat.checks || []).map(function (ch) {
-        var pill = '<span class="pill pill-' + ch.status + '">' + ch.status + "</span>";
-        var fix = ch.fix ? '<p class="cfix"><strong>Fix:</strong> ' + esc(ch.fix) + "</p>" : "";
-        return '<div class="check-row"><span class="cname">' + esc(ch.name) + "</span>" + pill +
-          '<p class="cdetail">' + esc(ch.detail) + "</p>" + fix + "</div>";
-      }).join("");
-      return '<div class="cat"><div class="cat-head"><span>' + esc(cat.name) +
-        "</span><span>" + cat.score + " / " + cat.max + "</span></div>" +
-        '<div class="bar"><span style="width:' + pct + '%"></span></div>' +
-        '<div class="cat-checks">' + checks + "</div></div>";
-    }).join("");
-  }
-
-  function renderFixes(report) {
-    if (!report.fixes || !report.fixes.length) {
-      return '<p>No misses &mdash; your store is in great shape. Nice work.</p>';
-    }
-    return "<ul class='fix-preview'>" + report.fixes.map(function (f) {
-      return "<li><span class='sev sev-" + f.severity + "'>" + f.severity + "</span>" +
-        "<strong>" + esc(f.check) + ".</strong> " + esc(f.fix) + "</li>";
-    }).join("") + "</ul>";
-  }
-
-  function fullReportCard(report) {
-    return '<div class="report-card">' +
-      '<div class="score-row">' + scoreRing(report.score) +
-      '<div class="score-meta"><h3><span class="grade grade-' + report.grade + '">' +
-      report.grade + "</span>" + esc(report.domain) + "</h3>" +
-      "<p>" + esc(report.summary) + "</p></div></div>" +
-      "<h4>Your full report</h4>" +
-      renderCategories(report) +
-      "<h4>Your fix list</h4>" +
-      renderFixes(report) +
-      "</div>";
-  }
+  /* The paid full report is served by /report as a print-ready HTML page
+     (Download PDF button). It is never rendered inline here. */
 
   /* ---------------- audit flow ---------------- */
   var STATUS_LINES = [
@@ -329,29 +292,13 @@
     }
 
     // Returning from Stripe Checkout after a completed payment.
+    // The full report lives at /report (print-ready HTML with a Download PDF
+    // button); the server re-verifies the payment there.
     var params = new URLSearchParams(window.location.search);
     var sessionId = params.get("session_id");
     if (params.get("paid") && sessionId) {
-      var resultEl = $("audit-result");
-      resultEl.hidden = false;
-      resultEl.innerHTML = '<div class="report-card"><p class="loading">' +
-        "Payment confirmed &mdash; loading your full report&hellip;</p></div>";
       window.history.replaceState({}, "", "/");
-      fetch("/api/report?session_id=" + encodeURIComponent(sessionId))
-        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
-        .then(function (res) {
-          if (!res.ok || res.j.error) {
-            resultEl.innerHTML = '<div class="err"><strong>Couldn&rsquo;t load your report:</strong> ' +
-              esc((res.j && res.j.error) || "unknown error") + "</div>";
-            return;
-          }
-          resultEl.innerHTML = fullReportCard(res.j);
-          resultEl.scrollIntoView({ behavior: "smooth", block: "start" });
-        })
-        .catch(function (err) {
-          resultEl.innerHTML = '<div class="err"><strong>Couldn&rsquo;t load your report:</strong> ' +
-            esc(String(err)) + "</div>";
-        });
+      window.location = "/report?session_id=" + encodeURIComponent(sessionId);
     }
 
     // Anonymized sample report (static JSON, rendered read-only, score only).

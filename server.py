@@ -9,6 +9,8 @@ Serves the landing page + audit widget API locally:
   GET  /api/audit?domain=X       -> run live audit (score-only JSON + report_token)
   GET  /api/config               -> public config (report price display)
   GET  /api/report?session_id=X  -> full report after verified Stripe payment
+  GET  /report?session_id=X       -> paid full report as print-ready HTML
+                                     (Download PDF via the browser print dialog)
   POST /api/checkout             -> create Stripe Checkout Session {report_token}
   POST /api/message              -> visitor message (JSON body), emailed via Resend
   POST /api/lead                 -> capture lead (JSON body), returns lead_id
@@ -37,6 +39,7 @@ import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import audit as audit_engine
+import report_html
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(HERE, "static")
@@ -124,6 +127,47 @@ def stripe_api(method, path, params=None):
     except urllib.error.HTTPError as e:
         detail = e.read().decode("utf-8", "replace")[:200]
         raise RuntimeError("stripe %s: %s" % (e.code, detail))
+
+
+# session_ids already recorded as purchases (dedupe: /api/report and /report
+# share verification; a customer may hit both).
+_LOGGED_PURCHASES = set()
+
+
+def verified_paid_report(session_id):
+    """Verify a Stripe Checkout session and return the cached full report.
+
+    Returns (report_dict, None) on success, or (None, (http_code, err_dict)).
+    Records the purchase once per session_id.
+    """
+    if not session_id.startswith("cs_"):
+        return None, (400, {"error": "invalid checkout session"})
+    try:
+        session = stripe_api("GET", "/v1/checkout/sessions/" + session_id)
+    except Exception:
+        return None, (502, {"error": "couldn't verify payment"})
+    if session.get("payment_status") != "paid":
+        return None, (402, {"error": "payment not completed yet"})
+    meta = session.get("metadata") or {}
+    token = str(meta.get("report_token", ""))
+    entry = REPORT_CACHE.get(token)
+    if not entry:
+        return None, (410, {
+            "error": "this report expired — please re-run the free audit"})
+    report = entry[0]
+    if session_id not in _LOGGED_PURCHASES:
+        _LOGGED_PURCHASES.add(session_id)
+        append_jsonl(PURCHASES_FILE, {
+            "ts": int(time.time()),
+            "session_id": session_id,
+            "domain": report.get("domain"),
+            "score": report.get("score"),
+            "amount_cents": session.get("amount_total"),
+            "currency": session.get("currency"),
+        })
+        log_event("purchase", {"domain": report.get("domain"),
+                               "score": report.get("score")})
+    return report, None
 
 
 def send_notification(subject, body):
@@ -296,36 +340,30 @@ class Handler(BaseHTTPRequestHandler):
                 "stripe_configured": bool(STRIPE_SECRET_KEY),
             })
         if path == "/api/report":
-            # Paid full report. Verifies the Stripe Checkout Session
+            # Paid full report (JSON). Verifies the Stripe Checkout Session
             # server-side, then serves the cached full audit.
             session_id = (qs.get("session_id") or [""])[0].strip()
-            if not session_id.startswith("cs_"):
-                return self._json(400, {"error": "invalid checkout session"})
-            try:
-                session = stripe_api(
-                    "GET", "/v1/checkout/sessions/" + session_id)
-            except Exception as e:
-                return self._json(502, {"error": "couldn't verify payment"})
-            if session.get("payment_status") != "paid":
-                return self._json(402, {"error": "payment not completed yet"})
-            meta = session.get("metadata") or {}
-            token = str(meta.get("report_token", ""))
-            entry = REPORT_CACHE.get(token)
-            if not entry:
-                return self._json(410, {
-                    "error": "this report expired — please re-run the free audit"})
-            report = entry[0]
-            append_jsonl(PURCHASES_FILE, {
-                "ts": int(time.time()),
-                "session_id": session_id,
-                "domain": report.get("domain"),
-                "score": report.get("score"),
-                "amount_cents": session.get("amount_total"),
-                "currency": session.get("currency"),
-            })
-            log_event("purchase", {"domain": report.get("domain"),
-                                   "score": report.get("score")})
+            report, err = verified_paid_report(session_id)
+            if err:
+                code, obj = err
+                return self._json(code, obj)
             return self._json(200, report)
+        if path == "/report":
+            # Paid full report as a print-ready HTML page. Same Stripe
+            # verification as /api/report; the Download PDF button uses the
+            # browser print dialog (Save as PDF). No new dependencies.
+            session_id = (qs.get("session_id") or [""])[0].strip()
+            report, err = verified_paid_report(session_id)
+            if err:
+                code, obj = err
+                if code in (402, 410):
+                    # Customer-facing states get a friendly page, not JSON.
+                    return self._send(code, report_html.render_report(
+                        {"domain": "", "score": 0, "grade": "F",
+                         "error": obj["error"]}), "text/html; charset=utf-8")
+                return self._json(code, obj)
+            return self._send(200, report_html.render_report(report),
+                              "text/html; charset=utf-8")
         if path == "/api/stats":
             audits = read_jsonl(AUDITS_FILE)
             leads = read_jsonl(LEADS_FILE)
