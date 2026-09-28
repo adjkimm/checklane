@@ -149,7 +149,11 @@ def send_notification(subject, body):
         req = urllib.request.Request(
             "https://api.resend.com/emails", data=payload,
             headers={"Authorization": "Bearer " + RESEND_API_KEY,
-                     "Content-Type": "application/json"})
+                     "Content-Type": "application/json",
+                     # api.resend.com sits behind Cloudflare, which 403s the
+                     # default Python-urllib User-Agent before the request
+                     # ever reaches Resend (looks like an auth failure).
+                     "User-Agent": "Checklane/1.0 (https://getchecklane.com)"})
         with urllib.request.urlopen(req, timeout=15) as resp:
             resp.read()
         print(json.dumps({"event": "notify_sent", "ts": int(time.time()),
