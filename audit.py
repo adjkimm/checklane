@@ -843,12 +843,12 @@ def audit(domain):
                             "high"))
     if org_nodes:
         checks.append(check("org-markup", "Store identity labels",
-                            "pass", "Found your store's identity labels. AI can "
+                            "pass", "Found your site's identity labels. AI can "
                             "verify who you are.", None))
     else:
         checks.append(check("org-markup", "Store identity labels",
-                            "partial", "No identity labels found for your store.",
-                            "Add your store name, web address, and logo in labeled "
+                            "partial", "No identity labels found for your site.",
+                            "Add your business name, web address, and logo in labeled "
                             "format. It's the easiest way for AI to verify you're "
                             "legit.", "low"))
     scores[cat] = (min(s, cmax), cmax)
@@ -1453,18 +1453,18 @@ def _cat_check_ids(cat_name):
 
 def _summary(score, grade):
     if score >= 85:
-        return ("Excellent. Your store speaks AI's language. The key signals AI "
+        return ("Excellent. Your site speaks AI's language. The key signals AI "
                 "agents need are all here; what's left is polish.")
     if score >= 70:
         return ("Nearly there. A few gaps keep some AI agents from fully reading "
-                "or transacting with your store. The fix list closes them.")
+                "or transacting with your site. The fix list closes them.")
     if score >= 55:
         return ("Halfway. AI can probably find you, but it'll struggle to read "
-                "your catalog or use the fast machine paths. Start with the "
+                "your content or use the fast machine paths. Start with the "
                 "high-priority fixes.")
     if score >= 40:
         return ("Needs work. AI agents will struggle with the machine-readable "
-                "layer of your store. Browser-based agents can still buy through "
+                "layer of your site. Browser-based agents can still buy through "
                 "normal checkout, but slowly, and you're hard to compare. The fix "
                 "list is your roadmap.")
     return ("Not ready yet. The fast machine paths (UCP/ACP) are missing and the "
