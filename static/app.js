@@ -43,7 +43,7 @@
       '<p class="micro">The full report names every check and ranks every fix.</p></div>' +
       '<button type="button" class="btn btn-large" id="buy-btn">Buy the full report: ' +
       esc(PRICE_DISPLAY) + "</button>" +
-      '<p class="micro">Secure payment via Stripe. Your report opens right after payment, and a receipt with the report link is emailed to you. If you close the tab, use the email link or the &ldquo;lost your report?&rdquo; link below. 7-day satisfaction guarantee: not happy? Full refund, no questions asked. <a href="/refund">Read the guarantee</a>.</p>' +
+      '<p class="micro">Secure payment via Stripe. Your report opens right after payment, and a receipt with the report link is emailed to you. If you close the tab, use the email link or the &ldquo;lost your report?&rdquo; link below. Delivery guarantee: if your report fails to generate, we re-run it or refund you. <a href="/refund">Read the guarantee</a>.</p>' +
       '<p class="micro">Lost your report? <a href="/lost-report">Get it re-sent</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/refund">Refund policy</a></p>' +
       '<div class="field-err" id="buy-err"></div></div>';
   }

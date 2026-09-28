@@ -126,8 +126,7 @@ STORE_DB_PATH = os.path.join(DATA_DIR, "checklane.db")
 # Guarantee wording shown on the paywall's legal page and in buyer receipts
 # (agreed with the site workstream; keep in sync with static/legal/refund.html).
 RECEIPT_GUARANTEE = (
-    "Love it or your money back — full refund within 7 days, no questions asked. "
-    "And if your report ever fails to generate or you lose access, "
+    "Delivery guarantee: if your report ever fails to generate or you lose access, "
     "we'll re-run it for you or refund you — your choice. "
     "Refunds go back to your card, typically within 5–10 business days."
 )
