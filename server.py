@@ -819,6 +819,10 @@ class Handler(BaseHTTPRequestHandler):
         if path in ("/robots.txt", "/llms.txt"):
             # Practice-what-we-preach: real crawler file + AI-reader file.
             return self._serve_file(path[1:], "text/plain; charset=utf-8")
+        if path == "/c0bde959d3895522f6d82380f8168ff5.txt":
+            # IndexNow key verification (added 2026-09-28 for instant indexing).
+            return self._serve_file("c0bde959d3895522f6d82380f8168ff5.txt",
+                                    "text/plain; charset=utf-8")
         if path == "/":
             return self._serve_file("index.html")
         if path.startswith("/static/"):
