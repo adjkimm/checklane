@@ -24,24 +24,24 @@ import time
 CATEGORY_LENS = {
     # category name -> (lens label, why-it-matters HTML)
     "AI checkout handshake (UCP + ACP)": (
-        "Why it matters — the CMO view",
+        "Why it matters: the CMO view",
         "Two protocols, one idea: give agents a <em>machine path</em> to buy, "
         "instead of making them drive your website like a human. "
         "<strong>UCP</strong> (Google) is a capability profile your site "
-        "publishes at <code>/.well-known/ucp</code> — agents read it to learn "
+        "publishes at <code>/.well-known/ucp</code>; agents read it to learn "
         "what commerce actions you support. <strong>ACP</strong> (OpenAI + "
-        "Stripe) is the protocol behind ChatGPT shopping — there is no on-site "
+        "Stripe) is the protocol behind ChatGPT shopping; there is no on-site "
         "file; merchants qualify by uploading a product feed and completing "
         "OpenAI's partner onboarding. Be clear-eyed about what this buys: "
         "browser-driving agents already complete purchases through normal "
         "checkout today, with no protocol file at all. The handshake is a "
-        "faster, more reliable path — an optimization, not a prerequisite. "
+        "faster, more reliable path: an optimization, not a prerequisite. "
         "Its real cost is honesty: publishing the file is hours, but the "
         "working backend behind it (endpoints, payment handlers, webhooks) is "
         "days to weeks of engineering.",
     ),
     "Product info AI can read": (
-        "Why it matters — the SEO-expert view",
+        "Why it matters: the SEO-expert view",
         "This is the same discipline as SEO, one layer deeper. Google taught us "
         "to mark up content so <em>search engines</em> understand it; now we mark "
         "up products so <em>buying agents</em> understand it. An AI comparing "
@@ -51,27 +51,27 @@ CATEGORY_LENS = {
         "you've given to someone else.",
     ),
     "Can AI find your products": (
-        "Why it matters — the advertising-expert view",
+        "Why it matters: the advertising-expert view",
         "A sitemap is your catalog's table of contents for machines. Without it, "
-        "discovery depends on an agent crawling and hoping — most won't bother; "
+        "discovery depends on an agent crawling and hoping. Most won't bother; "
         "they'll query the competitor whose feed hands them the full catalog in "
         "one fetch. If SEO taught us \"don't make Google guess,\" the AI era "
         "teaches \"don't make the agent guess.\" <strong>Distribution is a "
         "technical feature now</strong>, not just a marketing budget.",
     ),
     "AI bot access": (
-        "Why it matters — what this actually measures",
-        "This is the silent killer category — with one important clarification "
+        "Why it matters: what this actually measures",
+        "This is the silent killer category, with one important clarification "
         "about <em>what</em> it kills. We test whether known AI crawlers and "
         "on-demand fetchers can load your homepage: training crawlers (GPTBot, "
         "ClaudeBot), search fetchers (OAI-SearchBot, Claude-SearchBot), and "
         "agent-mode fetchers (ChatGPT-User, Google-Agent). Many sites block "
-        "these without knowing it — over-aggressive WAF rules, \"bot fight "
+        "these without knowing it: over-aggressive WAF rules, \"bot fight "
         "mode\" on Cloudflare, or blanket <code>Disallow: /</code> lines aimed "
         "at scrapers. The store owner sees a fine website; the AI fetcher sees "
         "a locked door, and your pages can't appear in AI answers. What this "
         "does <em>not</em> measure: whether \"AI shoppers\" are blocked. "
-        "Blocking a training crawler does not block AI shopping — "
+        "Blocking a training crawler does not block AI shopping. "
         "browser-driving agents buy through normal checkout regardless. A "
         "clean score here is worth protecting: it's the category most likely "
         "to <em>regress</em> without anyone noticing (one WAF toggle, one "
@@ -99,9 +99,9 @@ EFFORT = [
     ("sitemap", "1 hr"),
     ("product-feed", "1–2 hrs"),
     ("agents-md", "30 min"),
-    ("bot-test-scope", "—"),
+    ("bot-test-scope", "n/a"),
     ("agent-ua", "15 min"),
-    ("agent-access-summary", "—"),
+    ("agent-access-summary", "n/a"),
     ("robots-ai", "15 min"),
     ("static-content", "1 hr"),
     ("html-basics", "1 hr"),
@@ -121,9 +121,9 @@ OWNER = [
     ("sitemap", "DIY"),
     ("product-feed", "DIY on Shopify; Developer otherwise"),
     ("agents-md", "DIY"),
-    ("bot-test-scope", "—"),
+    ("bot-test-scope", "n/a"),
     ("agent-ua", "DIY"),
-    ("agent-access-summary", "—"),
+    ("agent-access-summary", "n/a"),
     ("robots-ai", "DIY"),
     ("static-content", "Developer"),
     ("html-basics", "DIY"),
@@ -132,7 +132,7 @@ OWNER = [
 
 STRATEGIC_PLAYS = [
     ("Your product data is your new ad inventory",
-     "In AI-mediated shopping, the \"ad\" isn't a banner — it's the structured "
+     "In AI-mediated shopping, the \"ad\" isn't a banner. It's the structured "
      "record the agent reads when comparing options. Completeness, accuracy, and "
      "freshness of that record <em>is</em> the campaign. Budget accordingly: data "
      "hygiene is now a marketing function, not just engineering."),
@@ -145,7 +145,7 @@ STRATEGIC_PLAYS = [
     ("Be the easiest \"yes\" in the comparison",
      "Agents compare on structured fields. If your competitor's listing has price, "
      "stock, shipping time, and returns policy machine-readable and yours doesn't, "
-     "you don't lose on merit — you're simply incomparable, and incomparable "
+     "you don't lose on merit. You're simply incomparable, and incomparable "
      "loses to comparable every time. Completeness beats cleverness."),
     ("Own the surfaces agents read",
      "Beyond your own site: reviews, Q&amp;A, and comparison content feed the "
@@ -153,8 +153,8 @@ STRATEGIC_PLAYS = [
      "<em>considered</em>; reputation signals get you <em>chosen</em>. Both "
      "matter, in that order."),
     ("Move before it's crowded",
-     "Machine-readable commerce signals — product markup, AI-native site "
-     "summaries, agent-readable checkout handshakes — are still rare. The stores "
+     "Machine-readable commerce signals (product markup, AI-native site "
+     "summaries, agent-readable checkout handshakes) are still rare. The stores "
      "that implement them now get a window where they're among the few "
      "machine-legible options in their category. That window closes as the "
      "standards go mainstream."),
@@ -163,36 +163,36 @@ STRATEGIC_PLAYS = [
 # score band -> (hero headline, one-liner, business paragraph)
 BANDS = [
     (85, "Ready for AI shoppers",
-     "AI agents — browsing or via the machine paths — can find, read, and transact with your store today.",
+     "AI agents, browsing or via the machine paths, can find, read, and transact with your store today.",
      "More than four-fifths of the technical surface AI agents use is in "
      "place. This report is about staying ahead: close the remaining gaps, then "
-     "play offense in §5. Almost nothing here requires strategy changes — it's "
+     "play offense in §5. Almost nothing here requires strategy changes. It's "
      "polish on a working foundation."),
     (70, "Nearly there",
-     "AI agents can mostly work with your store — but a few gaps are costing you.",
+     "AI agents can mostly work with your store, but a few gaps are costing you.",
      "The foundation is solid and most of what AI agents need is present. The "
      "remaining gaps are specific and fixable, and the phased plan in §3 orders "
-     "them by leverage — most are days of focused work, not weeks. No rebrand, "
+     "them by leverage. Most are days of focused work, not weeks. No rebrand, "
      "no new products, no ad spend required."),
     (55, "Halfway visible",
      "AI can probably find you, but it struggles to read your catalog or use the fast machine paths.",
      "About half of the technical surface AI agents prefer is missing. The good "
      "news: nearly everything dragging this score down is plumbing, not "
-     "strategy. Work the phases in §3 in order — Phase 1 alone usually moves the "
+     "strategy. Work the phases in §3 in order. Phase 1 alone usually moves the "
      "needle visibly."),
     (40, "Hard for AI to use",
      "AI agents will struggle with the machine-readable layer of your store right now.",
-     "Most of the machine-readable surface AI agents prefer is missing — while "
+     "Most of the machine-readable surface AI agents prefer is missing. While "
      "browser-based agents can still buy through your normal checkout, you're "
      "hard to compare and slow to transact with. Treat this as a rebuild of the "
-     "machine-readable layer of your site — the human-facing site stays exactly "
+     "machine-readable layer of your site. The human-facing site stays exactly "
      "as it is. The phased plan in §3 is ordered by leverage: start at the top."),
     (0, "Not ready yet",
      "The fast machine paths are missing and the basics are thin.",
      "More than half of the technical surface AI agents use is missing. The "
      "good news: almost everything dragging this score down is <em>plumbing</em>, "
      "not strategy. No rebrand, no new products, no ad spend required. Focused "
-     "technical work moves this score more than months of marketing would — but "
+     "technical work moves this score more than months of marketing would, but "
      "note the UCP/ACP items are backend projects (days–weeks), not afternoon "
      "tasks."),
 ]
@@ -406,20 +406,20 @@ def _section_categories(report):
         fix_html = ""
         if fixes:
             items = "".join(
-                "<li><strong>%s</strong> — %s</li>"
+                "<li><strong>%s</strong>: %s</li>"
                 % (_esc(c.get("name")), _rich(c.get("fix")))
                 for c in fixes)
             fix_html = ('<div class="view-label">How to fix it</div>'
                         '<ol class="plain">%s</ol>') % items
         if cat.get("na"):
             head = ('<h3>%s %s</h3>'
-                    '<div class="note"><strong>Not scored — no storefront '
+                    '<div class="note"><strong>Not scored: no storefront '
                     'detected.</strong> This category only applies to online '
                     'stores, so it doesn\'t count toward your score. The checks '
                     'below were still run; treat them as informational.</div>'
                     % (_esc(name), '<span class="pill na">N/A</span>'))
         else:
-            head = ('<h3>%s — %s/%s %s</h3>'
+            head = ('<h3>%s: %s/%s %s</h3>'
                     % (_esc(name), _esc(score), _esc(cmax),
                        _cat_pill(score, cmax)))
         parts.append(
@@ -436,13 +436,13 @@ def _section_categories(report):
 def _section_action_plan(report):
     fixes = report.get("fixes", []) or []
     lookup = _check_lookup(report)
-    phases = [("Phase 1 — highest leverage",
+    phases = [("Phase 1: highest leverage",
                [f for f in fixes if f.get("severity") == "high"]),
-              ("Phase 2 — this month",
+              ("Phase 2: this month",
                [f for f in fixes if f.get("severity") == "medium"]),
-              ("Phase 3 — ongoing",
+              ("Phase 3: ongoing",
                [f for f in fixes if f.get("severity") == "low"])]
-    out = ['<p>Every finding with a fix is listed below — nothing skipped — '
+    out = ['<p>Every finding with a fix is listed below. Nothing skipped. '
            'ranked by impact, with who can do it and an honest effort estimate. '
            'Copy-paste templates and per-platform paths are in §4.</p>']
     n = 0
@@ -465,7 +465,7 @@ def _section_action_plan(report):
             rows.append(
                 "<tr><td>%d</td><td><strong>Re-run this audit</strong>"
                 "<div style='font-size:13px;color:#57534e'>Scores should climb "
-                "with each phase — re-audit to confirm.</div></td>"
+                "with each phase. Re-audit to confirm.</div></td>"
                 "<td>DIY</td><td>After each phase</td></tr>" % n)
             n += 1
             rows.append(
@@ -478,12 +478,12 @@ def _section_action_plan(report):
             rows.append(
                 "<tr><td>%d</td><td><strong>Keep machine-readable data in sync "
                 "with reality</strong><div style='font-size:13px;color:#57534e'>"
-                "Prices, availability, offerings — stale data trains agents to "
+                "Prices, availability, offerings: stale data trains agents to "
                 "distrust you.</div></td><td>DIY</td><td>Whenever things change</td></tr>" % n)
         out.append("<div class=\"twrap\"><table><tr><th>#</th><th>Action</th><th>Who</th><th>Effort</th></tr>%s</table></div>"
                    % "".join(rows))
     if n == 0:
-        out.append("<p>Nothing to fix — every check passed. Work §5 to stay ahead.</p>")
+        out.append("<p>Nothing to fix. Every check passed. Work §5 to stay ahead.</p>")
     return "\n".join(out)
 
 def _section_brief(report, domain, score):
@@ -491,26 +491,26 @@ def _section_brief(report, domain, score):
     caveat = ""
     if report.get("site_type") == "non-storefront":
         caveat = (
-            '<div class="note"><strong>Site-type note — read this before the '
+            '<div class="note"><strong>Site-type note: read this before the '
             'score:</strong> this site doesn\'t sell products online (no '
-            'storefront detected — no cart, no product data, no readable '
+            'storefront detected: no cart, no product data, no readable '
             'prices), so the three storefront-only categories are marked '
             '<strong>N/A</strong> below and your score is computed from the two '
             'categories that apply to every site. The N/A checks were still '
-            'run — they\'re informational, not failures.</div>'
+            'run. They\'re informational, not failures.</div>'
         )
     return """
-    <section><h2 class="sec">1 &nbsp; Executive brief — read this first</h2>
+    <section><h2 class="sec">1 &nbsp; Executive brief: read this first</h2>
     <p><strong>The one-sentence version:</strong> %s</p>
     <p><strong>Why this matters now:</strong> Your customers are starting to let AI
-    shop for them — ChatGPT shopping, Google AI Mode/Gemini, Perplexity. These
+    shop for them: ChatGPT shopping, Google AI Mode/Gemini, Perplexity. These
     shoppers don't browse like people do. They parse code: structured product
     data, sitemaps, machine-readable checkout signals. Browser-driving agents can
-    still buy through your normal checkout without any of this — that's how most
+    still buy through your normal checkout without any of this. That's how most
     agent purchases happen today. What the machine path buys you is reliability
     and speed: structured signals make you <em>comparable</em> and directly
     <em>transactable</em> instead of merely browsable. Without them you don't
-    lose on price or quality — you lose on being hard to compare.</p>
+    lose on price or quality. You lose on being hard to compare.</p>
     <p><strong>What a %s means in business terms:</strong> %s</p>
     %s
     <p><strong>The bottom line:</strong> Fix the plumbing (§2–3), then play offense
@@ -564,7 +564,7 @@ Allow: /
 
 # Note: Google-Agent does not honor robots.txt — manage it in your WAF/CDN."""
 
-_TEMPLATE_LLMS = """# https://yourstore.com/llms.txt — what AI visitors should know first
+_TEMPLATE_LLMS = """# https://yourstore.com/llms.txt: what AI visitors should know first
 
 ## What we sell
 One paragraph: who the store is for and what it sells.
@@ -573,7 +573,7 @@ One paragraph: who the store is for and what it sells.
 - [Product name](https://yourstore.com/products/slug): one line, $price
 
 ## Shipping & returns
-- Ships in X days from [place] — https://yourstore.com/shipping
+- Ships in X days from [place]: https://yourstore.com/shipping
 - Returns: https://yourstore.com/returns
 
 ## Contact
@@ -590,42 +590,42 @@ def _section_templates():
     <p>Paste each block inside
     <code>&lt;script type="application/ld+json"&gt; … &lt;/script&gt;</code>
     in your page <code>&lt;head&gt;</code>. The <code>gtin</code> line is what
-    ChatGPT's product feed matches on — include it wherever your products have
+    ChatGPT's product feed matches on it. Include it wherever your products have
     barcodes.</p>
     <pre>%s</pre>
-    <h3>robots.txt — AI-visitor stanza</h3>
+    <h3>robots.txt: AI-visitor stanza</h3>
     <p>Replace any blanket <code>Disallow: /</code> AI-crawler blocks with this.
     It lets discovery fetchers read your site; the training-crawler block stays
     commented out unless you actively want it.</p>
     <pre>%s</pre>
     <h3>llms.txt starter</h3>
-    <p>Save as <code>/llms.txt</code> at your domain root — the established
+    <p>Save as <code>/llms.txt</code> at your domain root. The established
     convention LLM tools actually read. (An <code>/agents.md</code> with the
     same content also works; a repo-root <code>AGENTS.md</code> is a different
-    thing — a coding-agent convention for software projects.)</p>
+    thing: a coding-agent convention for software projects.)</p>
     <pre>%s</pre>
     <h3>Where each fix lives, by platform</h3>
     <div class="twrap"><table><tr><th>Platform</th><th>UCP file</th><th>ChatGPT / ACP</th><th>Product labels &amp; sitemap</th></tr>
     <tr><td><strong>Shopify</strong></td>
-      <td>Turn on Shopify's Agentic sales channel / AI tools — they publish
+      <td>Turn on Shopify's Agentic sales channel / AI tools. They publish
       <code>/.well-known/ucp</code> for you.</td>
-      <td>Auto-enrolled via Shopify Catalog — nothing to apply for.</td>
+      <td>Auto-enrolled via Shopify Catalog. Nothing to apply for.</td>
       <td>JSON-LD built into most themes (extend via theme code or SEO apps);
       <code>/sitemap.xml</code> and <code>/products.json</code> automatic.</td></tr>
     <tr><td><strong>WooCommerce (WordPress)</strong></td>
-      <td>No native path — custom backend project (days–weeks): REST endpoints,
+      <td>No native path. Custom backend project (days–weeks): REST endpoints,
       payment handlers with signing keys, order webhooks.</td>
       <td>Product-feed plugin + OpenAI merchant onboarding (apply, then upload
       per OpenAI's Product Feed Spec).</td>
       <td>RankMath/Yoast output product markup; sitemap automatic via your SEO
       plugin.</td></tr>
     <tr><td><strong>Wix</strong></td>
-      <td>No native path today — custom development.</td>
+      <td>No native path today. Custom development.</td>
       <td>Feed export + OpenAI merchant onboarding.</td>
-      <td>Limited JSON-LD — use Wix SEO settings + custom code; sitemap
+      <td>Limited JSON-LD. Use Wix SEO settings + custom code; sitemap
       automatic.</td></tr>
     <tr><td><strong>Squarespace</strong></td>
-      <td>No native path today — custom development.</td>
+      <td>No native path today. Custom development.</td>
       <td>Feed export + OpenAI merchant onboarding.</td>
       <td>Partial built-in product markup; sitemap automatic.</td></tr>
     </table></div>
@@ -634,13 +634,13 @@ def _section_templates():
 
 
 _GLOSSARY = [
-    ("UCP — Universal Commerce Protocol",
+    ("UCP: Universal Commerce Protocol",
      "Google's open standard letting AI agents transact with a merchant backend. "
      "Your site publishes a capability profile at <code>/.well-known/ucp</code>; "
      "agents read it to learn what commerce actions you support."),
-    ("ACP — Agentic Commerce Protocol",
+    ("ACP: Agentic Commerce Protocol",
      "OpenAI + Stripe's protocol behind ChatGPT shopping. No on-site discovery "
-     "file — merchants qualify by uploading a product feed and completing "
+     "file. Merchants qualify by uploading a product feed and completing "
      "OpenAI's partner onboarding."),
     ("JSON-LD / structured data",
      "Labels embedded in your pages (name, price, stock, brand…) that let "
@@ -648,9 +648,9 @@ _GLOSSARY = [
      "shared vocabulary."),
     ("robots.txt",
      "A file at your domain root telling crawlers which paths they may fetch. "
-     "AI-crawler blocks here do not block AI shopping — only crawler access."),
+     "AI-crawler blocks here do not block AI shopping, only crawler access."),
     ("sitemap.xml",
-     "Your catalog's table of contents for machines — the main way agents "
+     "Your catalog's table of contents for machines: the main way agents "
      "discover every product you sell."),
     ("llms.txt",
      "The established convention for an LLM-readable summary of your site "
@@ -660,7 +660,7 @@ _GLOSSARY = [
      "AGENTS.md, which is a coding-agent convention for software projects."),
     ("GTIN / UPC / MPN",
      "Global product identifiers (barcode numbers / manufacturer part numbers). "
-     "ChatGPT's product feed keys on them — the strongest matching signal you "
+     "ChatGPT's product feed keys on them. The strongest matching signal you "
      "can publish."),
     ("Shared Payment Token",
      "Stripe's mechanism in ACP: ChatGPT initiates payment without exposing the "
@@ -690,7 +690,7 @@ def _section_strategy():
         '<div class="card"><h3>%s</h3><p>%s</p></div>' % (_esc(t), b)
         for t, b in STRATEGIC_PLAYS)
     return """
-    <section class="strategy"><h2 class="sec">5 &nbsp; Strategic plays — the thinking behind the checklist</h2>
+    <section class="strategy"><h2 class="sec">5 &nbsp; Strategic plays: the thinking behind the checklist</h2>
     <p>The moves a CMO, an advertising lead, an SEO lead, and an AI engineer would
     all converge on. The checklist fixes the plumbing; these decide how much the
     plumbing is worth.</p>
@@ -701,12 +701,12 @@ def _section_measurement():
     return """
     <section><h2 class="sec">6 &nbsp; How to know it's working</h2>
     <ul class="plain">
-      <li><strong>Re-audit:</strong> run the free Checklane audit after each phase —
+      <li><strong>Re-audit:</strong> run the free Checklane audit after each phase.
       the score should climb as fixes land.</li>
       <li><strong>Log watch:</strong> AI crawler/agent user-agents appearing in your
       server logs is the earliest signal you're being discovered.</li>
       <li><strong>The real metric:</strong> over time, track orders or inquiries that
-      originate from AI surfaces (ask "how did you hear about us" — add "AI assistant"
+      originate from AI surfaces (ask "how did you hear about us"; add "AI assistant"
       as an option). Nobody has perfect attribution here yet; directional signal beats none.</li>
     </ul></section>"""
 
@@ -733,13 +733,13 @@ def render_report(report):
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Checklane Report — %s</title>
+<title>Checklane Report: %s</title>
 <style>%s</style>
 </head>
 <body>
 <div class="toolbar">
   <button class="btn" onclick="window.print()">Download PDF</button>
-  <span class="note2">Opens the print dialog — choose "Save as PDF" to keep a copy of your report.</span>
+  <span class="note2">Opens the print dialog. Choose "Save as PDF" to keep a copy of your report.</span>
 </div>
 <div class="page">
   <header class="brand">
@@ -760,7 +760,7 @@ def render_report(report):
     %s
     <section><h2 class="sec">2 &nbsp; Category-by-category: what we found, why it matters, how to fix it</h2>
     %s</section>
-    <section><h2 class="sec">3 &nbsp; Your action plan — ranked, phased, handoff-ready</h2>
+    <section><h2 class="sec">3 &nbsp; Your action plan: ranked, phased, handoff-ready</h2>
     %s</section>
     %s
     %s
@@ -769,7 +769,7 @@ def render_report(report):
   </main>
   <footer>
     <strong>Checklane</strong> grades what's technically verifiable about your store
-    at audit time. This report is a roadmap, not a promise — a high score means
+    at audit time. This report is a roadmap, not a promise. A high score means
     nothing technical stands between you and the AI shopper; the rest is up to your
     products, prices, and reputation.
   </footer>
@@ -794,7 +794,7 @@ def render_report(report):
 def _error_page(domain, error):
     return """<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
-<title>Checklane Report — %s</title><style>%s</style></head>
+<title>Checklane Report: %s</title><style>%s</style></head>
 <body><div class="page">
 <header class="brand"><div class="wordmark">CHECK<span>LANE</span></div>
 <h1>AI-Readiness Report</h1></header>
