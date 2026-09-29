@@ -835,7 +835,9 @@ class Handler(BaseHTTPRequestHandler):
         if path in ("/guides", "/guides/", "/guides/index.html"):
             # Guides index (added 2026-09-28).
             return self._serve_file("guides/index.html")
-        if path in ("/guides/ai-shopping-agent-readiness",
+        if path in ("/services", "/services/"):
+            # Services page: consulting + monitoring beta (added 2026-09-28).
+            return self._serve_file("services.html")        if path in ("/guides/ai-shopping-agent-readiness",
                     "/guides/ai-shopping-agent-readiness/"):
             # Guide #1 (added 2026-09-28).
             return self._serve_file("guides/ai-shopping-agent-readiness.html")
