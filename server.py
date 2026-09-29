@@ -70,6 +70,7 @@ STATIC_DIR = os.path.join(HERE, "static")
 DATA_DIR = os.path.join(HERE, "data")
 LEADS_FILE = os.path.join(DATA_DIR, "leads.jsonl")
 BETA_FILE = os.path.join(DATA_DIR, "beta.jsonl")
+MESSAGES_FILE = os.path.join(DATA_DIR, "messages.jsonl")
 AUDITS_FILE = os.path.join(DATA_DIR, "audits.jsonl")
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]{2,}$")
@@ -1099,6 +1100,12 @@ class Handler(BaseHTTPRequestHandler):
                     "{message}\n").format(
                         name=name, email=email,
                         domain=domain or "(no store checked)", message=message)
+            # Durable capture (2026-09-28): save every message to disk so
+            # nothing is lost when email notification is unavailable.
+            entry = {"ts": int(time.time()), "name": name, "email": email,
+                     "domain": domain or None, "message": message,
+                     "id": uuid.uuid4().hex[:12]}
+            append_jsonl(MESSAGES_FILE, entry)
             send_notification("Checklane message from %s" % name, body)
             log_event("message", {"domain": domain or None})
             return self._json(200, {"ok": True})
