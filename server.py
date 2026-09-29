@@ -831,6 +831,13 @@ class Handler(BaseHTTPRequestHandler):
             # Legal pages (C6). The site workstream owns static/legal/*.html;
             # routes stay 404-safe until the files land.
             return self._serve_file("legal/" + path[1:] + ".html")
+        if path in ("/guides", "/guides/"):
+            # Guides index (added 2026-09-28).
+            return self._serve_file("guides/index.html")
+        if path in ("/guides/ai-shopping-agent-readiness",
+                    "/guides/ai-shopping-agent-readiness/"):
+            # Guide #1 (added 2026-09-28).
+            return self._serve_file("guides/ai-shopping-agent-readiness.html")
         if path == "/lost-report":
             # "Lost your report?" re-delivery page (M8): an email form that
             # POSTs to /api/resend-report. The response never reveals
