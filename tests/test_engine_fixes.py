@@ -405,7 +405,7 @@ check("blocked path does not tank category score",
 
 # ------------------------------------------------- 8. v1.1.0-m2 changes
 print("== v1.1.0-m2: version ==")
-check("engine version bumped", audit.VERSION == "1.1.0-m3", audit.VERSION)
+check("engine version bumped", audit.VERSION == "1.1.0-m4", audit.VERSION)
 
 print("== v1.1.0-m2: _is_product_node ==")
 check("Product matches", audit._is_product_node({"@type": "Product"}))
@@ -688,9 +688,79 @@ audit.fetch = make_m2_fetch(make_store_home(FAQ_3Q_LD))
 rep_f = audit.audit("127.0.0.1")
 check("Category 5 capped at 20", c5of(rep_f)["score"] == 20,
       str(c5of(rep_f)["score"]))
-check("engine VERSION is 1.1.0-m3", audit.VERSION == "1.1.0-m3", audit.VERSION)
-check("report carries m3 engine tag",
-      rep["engine"] == "checklane-audit/1.1.0-m3", rep["engine"])
+check("engine VERSION is 1.1.0-m4", audit.VERSION == "1.1.0-m4", audit.VERSION)
+check("report carries m4 engine tag",
+      rep["engine"] == "checklane-audit/1.1.0-m4", rep["engine"])
+
+print("== v1.1.0-m4: merchant-listing details + review signals ==")
+MERCHANT_FULL_LD = ('<script type="application/ld+json">{"@context":"https://schema.org",'
+    '"@type":"Product","name":"Gadget","sku":"G-1",'
+    '"offers":{"@type":"Offer","price":"49.99","priceCurrency":"USD",'
+    '"shippingDetails":{"@type":"OfferShippingDetails"},'
+    '"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy"}}}</script>')
+MERCHANT_ONE_LD = ('<script type="application/ld+json">{"@context":"https://schema.org",'
+    '"@type":"Product","name":"Gadget","sku":"G-1",'
+    '"offers":{"@type":"Offer","price":"49.99","priceCurrency":"USD",'
+    '"shippingDetails":{"@type":"OfferShippingDetails"}}}</script>')
+REVIEW_LD = ('<script type="application/ld+json">{"@context":"https://schema.org",'
+    '"@type":"Product","name":"Rated","sku":"R-1",'
+    '"aggregateRating":{"@type":"AggregateRating","ratingValue":"4.8","reviewCount":"12"},'
+    '"offers":{"@type":"Offer","price":"19.99","priceCurrency":"USD"}}</script>')
+
+
+def c2of(r):
+    return cat(r, "Product info AI can read")
+
+
+audit.fetch = make_m2_fetch(make_store_home())
+rep_base = audit.audit("127.0.0.1")
+audit.fetch = make_m2_fetch(make_store_home(MERCHANT_FULL_LD))
+rep_full = audit.audit("127.0.0.1")
+audit.fetch = make_m2_fetch(make_store_home(MERCHANT_ONE_LD))
+rep_one = audit.audit("127.0.0.1")
+audit.fetch = make_m2_fetch(make_store_home(REVIEW_LD))
+rep_rev = audit.audit("127.0.0.1")
+
+check("merchant-listing-details passes when both fields present",
+      check_status(rep_full, "Product info AI can read",
+                   "merchant-listing-details") == "pass")
+check("both merchant fields add exactly 2 points",
+      c2of(rep_full)["score"] - c2of(rep_base)["score"] == 2,
+      "%s vs %s" % (c2of(rep_full)["score"], c2of(rep_base)["score"]))
+check("one merchant field -> partial",
+      check_status(rep_one, "Product info AI can read",
+                   "merchant-listing-details") == "partial")
+check("one merchant field adds exactly 1 point",
+      c2of(rep_one)["score"] - c2of(rep_base)["score"] == 1,
+      "%s vs %s" % (c2of(rep_one)["score"], c2of(rep_base)["score"]))
+check("no merchant fields -> partial with no points and low severity",
+      check_status(rep_base, "Product info AI can read",
+                   "merchant-listing-details") == "partial")
+_mld = next(c for c in c2of(rep_base)["checks"]
+            if c["id"] == "merchant-listing-details")
+check("missing merchant fields are low severity (non-critical per Google)",
+      _mld["severity"] == "low" and _mld["fix"], str(_mld["severity"]))
+check("Category 2 still capped at 20",
+      c2of(rep_full)["score"] <= 20, str(c2of(rep_full)["score"]))
+check("new check ids registered in Category 2",
+      {"merchant-listing-details", "review-signals"} <=
+      audit._cat_check_ids("Product info AI can read"))
+check("review-signals passes when aggregateRating present",
+      check_status(rep_rev, "Product info AI can read",
+                   "review-signals") == "pass")
+check("review-signals partial when absent (never a fail)",
+      check_status(rep_base, "Product info AI can read",
+                   "review-signals") == "partial")
+check("review-signals never moves the score (no perverse incentive)",
+      c2of(rep_rev)["score"] - c2of(rep_base)["score"] == 0,
+      "%s vs %s" % (c2of(rep_rev)["score"], c2of(rep_base)["score"]))
+_no_rev = next(c for c in c2of(rep_base)["checks"]
+               if c["id"] == "review-signals")
+check("absent-review copy warns against inventing reviews",
+      "Never" in (_no_rev["fix"] or "") and "invent" in (_no_rev["fix"] or ""),
+      (_no_rev["fix"] or "")[:80])
+check("merchant-listing fix appears in the fixes list",
+      "merchant-listing-details" in [f["id"] for f in rep_base["fixes"]])
 
 audit.fetch = _real_fetch
 audit.polite = _real_polite

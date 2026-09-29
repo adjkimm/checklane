@@ -17,15 +17,29 @@
 <meta name="twitter:title" content="Checklane: Will AI shoppers find your site?">
 <meta name="twitter:description" content="Free 0-100 audit of your site's AI-shopper readiness: can AI shopping agents find, read, and buy from you? The full report names every check and every fix, for $9.">
 <link rel="stylesheet" href="/static/style.css">
+<!-- Search Console 2026-09-29: added image, shippingDetails, and
+     hasMerchantReturnPolicy to the Product offer for merchant listings.
+     aggregateRating/review intentionally omitted: we have no customer
+     reviews yet, and invented social proof is never added. -->
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"Product",
  "name":"Checklane Full AI-Readiness Report",
  "description":"The complete Checklane audit report for your site: every check explained, every fix ranked by impact, with step-by-step implementation guidance.",
+ "image":"https://getchecklane.com/static/img/hero-ai-shopper.webp",
  "brand":{"@type":"Brand","name":"Checklane"},
  "url":"https://getchecklane.com/",
  "offers":{"@type":"Offer","price":"9","priceCurrency":"USD",
   "availability":"https://schema.org/InStock",
-  "url":"https://getchecklane.com/#audit"}}
+  "url":"https://getchecklane.com/#audit",
+  "shippingDetails":{"@type":"OfferShippingDetails",
+   "shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"},
+   "shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},
+   "deliveryTime":{"@type":"ShippingDeliveryTime",
+    "handlingTime":{"@type":"QuantitativeValue","minValue":"0","maxValue":"0","unitCode":"MIN"},
+    "transitTime":{"@type":"QuantitativeValue","minValue":"0","maxValue":"0","unitCode":"MIN"}}},
+  "hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy",
+   "applicableCountry":"US",
+   "url":"https://getchecklane.com/refund"}}}
 </script>
 <script type="application/ld+json">
 {

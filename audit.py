@@ -24,7 +24,7 @@ import urllib.request
 import urllib.error
 from html.parser import HTMLParser
 
-VERSION = "1.1.0-m3"
+VERSION = "1.1.0-m4"
 FETCH_TIMEOUT = 12
 MAX_BODY = 1_000_000  # 1MB: some Shopify homepages carry 300KB+ of head scripts
 POLITENESS_DELAY = 0.4  # seconds between requests; polite crawling
@@ -845,6 +845,75 @@ def audit(domain):
                                 "product's labels. Without readable prices, AI can't "
                                 "show or sell your products.", "high"))
             s = max(0, s - 4)
+        # ---- Google merchant-listing fields (non-critical per Google) ---- #
+        # Dogfood lesson: Search Console flags missing shippingDetails and
+        # hasMerchantReturnPolicy inside offers as merchant-listing issues.
+        # Scores only move up: these add points, never subtract.
+        _offer_nodes = []
+        for _n in product_nodes:
+            _offs = _n.get("offers")
+            if isinstance(_offs, dict):
+                _offer_nodes.append(_offs)
+            elif isinstance(_offs, list):
+                _offer_nodes.extend(o for o in _offs if isinstance(o, dict))
+        _has_ship = any(o.get("shippingDetails") for o in _offer_nodes)
+        _has_ret = any(o.get("hasMerchantReturnPolicy") for o in _offer_nodes)
+        if _has_ship and _has_ret:
+            s += 2
+            checks.append(check("merchant-listing-details",
+                                "Shipping and return labels present",
+                                "pass", "Your offers include shipping details "
+                                "and a return policy AI can read. AI shoppers "
+                                "check both before deciding they can complete "
+                                "a purchase confidently.", None))
+        elif _has_ship or _has_ret:
+            s += 1
+            _have = "shipping details" if _has_ship else "a return policy"
+            _miss = "a return policy" if _has_ship else "shipping details"
+            checks.append(check("merchant-listing-details",
+                                "One merchant-listing detail missing",
+                                "partial", "Your offers include %s but not "
+                                "%s. Google lists both as merchant-listing "
+                                "suggestions." % (_have, _miss),
+                                "Add %s to your offers' labels "
+                                "(shippingDetails, hasMerchantReturnPolicy). "
+                                "AI shoppers check shipping and returns before "
+                                "they buy; unlabeled policies look like hidden "
+                                "terms." % _miss, "low"))
+        else:
+            checks.append(check("merchant-listing-details",
+                                "Shipping and return labels missing",
+                                "partial", "Your offers don't label shipping "
+                                "details or a return policy. Google lists both "
+                                "as merchant-listing suggestions (non-critical, "
+                                "they never block search results).",
+                                "Add shippingDetails and hasMerchantReturnPolicy "
+                                "to your offers' labels. AI shoppers check "
+                                "shipping cost and returns before they buy; "
+                                "unlabeled policies look like hidden terms.",
+                                "low"))
+        # ---- Review labels: informational only, never scored --------------- #
+        # Google suggests aggregateRating/review as a non-critical
+        # improvement. We report presence and NEVER penalize absence:
+        # pressuring merchants toward reviews they haven't earned invites
+        # fabricated social proof.
+        if any(n.get("aggregateRating") or n.get("review")
+               for n in product_nodes):
+            checks.append(check("review-signals", "Real review labels found",
+                                "pass", "Your products carry review labels "
+                                "(aggregateRating/review). Google can show "
+                                "your ratings in search results.", None))
+        else:
+            checks.append(check("review-signals", "No review labels",
+                                "partial", "No review labels on your products. "
+                                "Google suggests them so products can show "
+                                "ratings in search, but they never block "
+                                "results.",
+                                "Add aggregateRating and review labels only "
+                                "if you have real customer reviews. Never "
+                                "invent reviews or ratings: fabricated social "
+                                "proof gets penalized and destroys trust.",
+                                "low"))
     else:
         checks.append(check("product-markup", "Products aren't labeled",
                             "fail", "No product labels on your homepage%s."
@@ -1475,6 +1544,7 @@ def _cat_check_ids(cat_name):
             "acp-feed-signals", "acp-policies"},
         "Product info AI can read": {"jsonld-present", "product-markup",
                                     "product-completeness", "offers-present",
+                                    "merchant-listing-details", "review-signals",
                                     "org-markup"},
         "Can AI find your products": {"sitemap", "product-feed", "agents-md"},
         "AI bot access": {"bot-test-scope", "agent-ua", "agent-access-summary"},
