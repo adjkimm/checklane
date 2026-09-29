@@ -838,6 +838,18 @@ class Handler(BaseHTTPRequestHandler):
                     "/guides/ai-shopping-agent-readiness/"):
             # Guide #1 (added 2026-09-28).
             return self._serve_file("guides/ai-shopping-agent-readiness.html")
+        if path in ("/guides/what-are-ai-shopping-agents",
+                    "/guides/what-are-ai-shopping-agents/"):
+            # Guide #2 (added 2026-09-28).
+            return self._serve_file("guides/what-are-ai-shopping-agents.html")
+        if path in ("/guides/ai-seo-for-small-business",
+                    "/guides/ai-seo-for-small-business/"):
+            # Guide #3 (added 2026-09-28).
+            return self._serve_file("guides/ai-seo-for-small-business.html")
+        if path in ("/guides/product-pages-invisible-to-ai",
+                    "/guides/product-pages-invisible-to-ai/"):
+            # Guide #4 (added 2026-09-28).
+            return self._serve_file("guides/product-pages-invisible-to-ai.html")
         if path == "/lost-report":
             # "Lost your report?" re-delivery page (M8): an email form that
             # POSTs to /api/resend-report. The response never reveals
