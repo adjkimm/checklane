@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <link rel="canonical" href="https://getchecklane.com/guides/robots-txt-ai-crawlers" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Should You Block AI Crawlers? A Store Owner's Guide to robots.txt: Checklane Guides</title>
+<meta name="description" content="Your robots.txt may be blocking GPTBot, ClaudeBot, and PerplexityBot without you knowing. Here's what AI crawler blocking means for a store that wants AI shoppers.">
+<meta property="og:title" content="Should You Block AI Crawlers? A Store Owner's Guide to robots.txt">
+<meta property="og:description" content="Blocking AI crawlers protects your content but makes you invisible to AI shoppers. Here's the tradeoff, in plain English.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://getchecklane.com/guides/robots-txt-ai-crawlers">
+<link rel="stylesheet" href="/static/style.css">
+<style>
+.pull { border-left: 3px solid #1a1a1a; padding: .2rem 0 .2rem 1rem; font-style: italic; margin: 1.2rem 0; }
+.guide-cta { background: #f6f6f4; border: 1px solid #e2e2de; border-radius: 12px; padding: 1.5rem; margin-top: 2rem; }
+.code { background: #f6f6f4; border: 1px solid #e2e2de; border-radius: 8px; padding: 1rem; overflow-x: auto; font-family: monospace; font-size: .9rem; white-space: pre; }
+</style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Should You Block AI Crawlers? A Store Owner's Guide to robots.txt",
+  "description": "Your robots.txt may be blocking GPTBot, ClaudeBot, and PerplexityBot without you knowing. Here's what AI crawler blocking means for a store that wants AI shoppers.",
+  "author": { "@type": "Organization", "name": "Checklane" },
+  "publisher": { "@type": "Organization", "name": "Checklane" },
+  "mainEntityOfPage": "https://getchecklane.com/guides/robots-txt-ai-crawlers"
+}
+</script>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="/"><span class="brand-mark">▦</span> Checklane</a>
+    <nav class="nav-links">
+      <a href="/#how">How it works</a>
+      <a href="/#teaser">Our own audit</a>
+      <a href="/#checks">What we check</a>
+      <a href="/#faq">FAQ</a>
+      <a href="/guides">Guides</a>
+    </nav>
+    <a class="btn btn-small" href="/#audit">Free audit</a>
+  </div>
+</header>
+
+<main class="section">
+  <div class="wrap legal">
+    <p class="kicker">Checklane Guides</p>
+    <h1>Should You Block AI Crawlers? A Store Owner's Guide to robots.txt</h1>
+    <p class="micro">No technical background required. About a 4-minute read.</p>
+
+    <p>Somewhere in your website sits a small file called robots.txt. It tells automated visitors which parts of your site they may read. In the last couple of years, a new crowd of visitors showed up: AI crawlers with names like GPTBot, ClaudeBot, and PerplexityBot. Many store owners blocked them on reflex. If you want AI shoppers to find you, that reflex may be costing you sales.</p>
+
+    <h2>What robots.txt does</h2>
+    <p>robots.txt is a plain-text file at yoursite.com/robots.txt. It lists crawlers by name and says "you may read these pages" or "stay out." Respectful crawlers obey it. It was built for search engines, but AI companies' crawlers read it too.</p>
+    <p>A typical block looks like this:</p>
+    <div class="code">User-agent: GPTBot
+Disallow: /</div>
+    <p>Those two lines tell OpenAI's crawler to stay off your entire site.</p>
+
+    <h2>Which AI crawlers exist</h2>
+    <p>The names you will see most: <strong>GPTBot</strong> (OpenAI, feeds ChatGPT), <strong>ClaudeBot</strong> (Anthropic, feeds Claude), <strong>PerplexityBot</strong> (Perplexity), and <strong>Google-Extended</strong> (Google's control for AI training use). There are others, and new ones appear regularly. You can see exactly who you are blocking by opening your own robots.txt in a browser.</p>
+    <p class="pull">"Every crawler you block is an AI assistant that will never learn your store exists."</p>
+
+    <h2>The tradeoff, honestly</h2>
+    <p>Blocking is not crazy. Crawlers cost you bandwidth, and some store owners object to their content training AI models. Those are legitimate concerns, and for a blog or a publisher they may win.</p>
+    <p>But a store is not a publisher. Your product pages are advertisements you pay to keep online. An AI crawler reading them is a potential shopper doing research. Blocking it does not protect a trade secret; it hides your storefront from the fastest-growing kind of window shopper.</p>
+    <p>The math is simple: if you want AI assistants to recommend your products and AI agents to buy them, those systems have to be allowed to read your site. Blocked pages cannot be recommended, cited, or purchased from.</p>
+
+    <h2>What we recommend for stores</h2>
+    <p>1. Open yoursite.com/robots.txt and read it. Look for GPTBot, ClaudeBot, PerplexityBot, and Google-Extended.<br>
+    2. If you sell things online and want AI-driven traffic, do not disallow those crawlers from your product and category pages.<br>
+    3. Keep blocking what should stay private: admin pages, carts, checkout flows, and customer accounts. Those were never meant for crawlers of any kind.<br>
+    4. Re-check after any site migration or redesign. Blocks have a way of reappearing.</p>
+
+    <h2>One nuance worth knowing</h2>
+    <p>Some AI features do not rely on these crawlers at all. Shopping agents that drive a real browser, for example, visit your site the way a person would and never check robots.txt. Unblocking crawlers helps the assistants that read and cite the web. It does not hurt you with the agents that browse directly. There is no scenario where allowing product-page reads makes you worse off with AI shoppers.</p>
+
+    <div class="guide-cta">
+      <h2>Run your free audit</h2>
+      <p>Checklane checks your robots.txt for AI crawler blocks, plus every other signal AI shoppers read. Paste any public URL for your free 0-100 score.</p>
+      <p><a class="btn" href="/#audit">Get my free score</a></p>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <p><span class="brand-mark">▦</span> Checklane helps small businesses get found by AI shoppers.</p>
+    <p class="micro footer-links"><a href="/guides">Guides</a> &middot; <a href="/services">Services</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/refund">Refund policy</a></p>
+    <p class="micro">Checklane grades what&rsquo;s technically verifiable about your site
+      at audit time. A score is not a promise of sales or AI recommendations.</p>
+  </div>
+</footer>
+
+</body>
+</html>

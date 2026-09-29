@@ -854,6 +854,22 @@ class Handler(BaseHTTPRequestHandler):
                     "/guides/product-pages-invisible-to-ai/"):
             # Guide #4 (added 2026-09-28).
             return self._serve_file("guides/product-pages-invisible-to-ai.html")
+        if path in ("/guides/chatgpt-product-recommendations",
+                    "/guides/chatgpt-product-recommendations/"):
+            # Guide #5 (added 2026-09-28).
+            return self._serve_file("guides/chatgpt-product-recommendations.html")
+        if path in ("/guides/llms-txt-guide",
+                    "/guides/llms-txt-guide/"):
+            # Guide #6 (added 2026-09-28).
+            return self._serve_file("guides/llms-txt-guide.html")
+        if path in ("/guides/robots-txt-ai-crawlers",
+                    "/guides/robots-txt-ai-crawlers/"):
+            # Guide #7 (added 2026-09-28).
+            return self._serve_file("guides/robots-txt-ai-crawlers.html")
+        if path in ("/guides/shopify-ai-readiness",
+                    "/guides/shopify-ai-readiness/"):
+            # Guide #8 (added 2026-09-28).
+            return self._serve_file("guides/shopify-ai-readiness.html")
         if path == "/lost-report":
             # "Lost your report?" re-delivery page (M8): an email form that
             # POSTs to /api/resend-report. The response never reveals

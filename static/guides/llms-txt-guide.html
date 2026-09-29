@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <link rel="canonical" href="https://getchecklane.com/guides/llms-txt-guide" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>llms.txt Explained: The Small File That Tells AI About Your Business: Checklane Guides</title>
+<meta name="description" content="llms.txt is a small file that summarizes your website for AI systems. Here's what it is, what to put in it, and how to add it to your store.">
+<meta property="og:title" content="llms.txt Explained: The Small File That Tells AI About Your Business">
+<meta property="og:description" content="A plain-English guide to llms.txt: what it is, what belongs in it, and how to add it to your site.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://getchecklane.com/guides/llms-txt-guide">
+<link rel="stylesheet" href="/static/style.css">
+<style>
+.pull { border-left: 3px solid #1a1a1a; padding: .2rem 0 .2rem 1rem; font-style: italic; margin: 1.2rem 0; }
+.guide-cta { background: #f6f6f4; border: 1px solid #e2e2de; border-radius: 12px; padding: 1.5rem; margin-top: 2rem; }
+.code { background: #f6f6f4; border: 1px solid #e2e2de; border-radius: 8px; padding: 1rem; overflow-x: auto; font-family: monospace; font-size: .9rem; white-space: pre; }
+</style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "llms.txt Explained: The Small File That Tells AI About Your Business",
+  "description": "llms.txt is a small file that summarizes your website for AI systems. Here's what it is, what to put in it, and how to add it to your store.",
+  "author": { "@type": "Organization", "name": "Checklane" },
+  "publisher": { "@type": "Organization", "name": "Checklane" },
+  "mainEntityOfPage": "https://getchecklane.com/guides/llms-txt-guide"
+}
+</script>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="/"><span class="brand-mark">▦</span> Checklane</a>
+    <nav class="nav-links">
+      <a href="/#how">How it works</a>
+      <a href="/#teaser">Our own audit</a>
+      <a href="/#checks">What we check</a>
+      <a href="/#faq">FAQ</a>
+      <a href="/guides">Guides</a>
+    </nav>
+    <a class="btn btn-small" href="/#audit">Free audit</a>
+  </div>
+</header>
+
+<main class="section">
+  <div class="wrap legal">
+    <p class="kicker">Checklane Guides</p>
+    <h1>llms.txt Explained: The Small File That Tells AI About Your Business</h1>
+    <p class="micro">No technical background required. About a 4-minute read.</p>
+
+    <p>Your website has a robots.txt that talks to search engines. Now there is a newer convention: an llms.txt file that talks to AI systems. It is a short plain-text summary of your business, sitting at yoursite.com/llms.txt, written for machines that read. If AI shoppers are going to understand your store, this file is one of the cheapest ways to help them.</p>
+
+    <h2>What llms.txt actually is</h2>
+    <p>It is a Markdown file at the root of your website. It answers the questions an AI would ask before recommending you: what do you sell, who is it for, where do you ship, how does buying work. Instead of making the AI piece that together from dozens of pages, you hand it the summary directly.</p>
+    <p>The convention was proposed as a standard the way robots.txt and sitemap.xml were: a file in a known location, in a predictable format, that machines check first. Adoption is still early, but the cost of adding one is near zero.</p>
+    <p class="pull">"llms.txt is your elevator pitch, filed where AI looks first."</p>
+
+    <h2>What to put in it</h2>
+    <p>Keep it short and factual. A good llms.txt for a store has:</p>
+    <p><strong>Who you are.</strong> Business name, what you sell, who it is for, in one or two sentences.<br>
+    <strong>What you sell.</strong> Your main product categories, with links to the category pages.<br>
+    <strong>How buying works.</strong> Where you ship, returns policy in one line, how checkout works.<br>
+    <strong>Key pages.</strong> Links to your bestsellers, shipping info, and contact page.<br>
+    <strong>What is new.</strong> Anything timely: seasonal lines, current promotions, restocks.</p>
+    <p>Do not stuff it with keywords or marketing fluff. AI systems are good at ignoring fluff and good at using facts. Give them facts.</p>
+
+    <h2>An example</h2>
+    <div class="code"># Acme Outdoor Gear
+
+We sell durable hiking and camping gear for weekend backpackers.
+Ships across the US. 60-day returns, no questions asked.
+
+## Products
+- Backpacks: https://example.com/collections/backpacks
+- Tents: https://example.com/collections/tents
+- Sale: https://example.com/collections/sale
+
+## Policies
+- Shipping: https://example.com/shipping
+- Returns: https://example.com/returns</div>
+
+    <h2>How to add it to your site</h2>
+    <p>1. Write the file in any text editor and save it as llms.txt.<br>
+    2. Upload it to the root of your website, so it loads at yoursite.com/llms.txt.<br>
+    3. On Shopify: add it as a page template redirect, or serve it through an app or your theme files. There is no one-click upload, but any developer can place it in under an hour.<br>
+    4. Visit the URL yourself to confirm it loads as plain text.</p>
+
+    <h2>What llms.txt will not do</h2>
+    <p>It will not make AI recommend you on its own, and it is not a ranking trick. Think of it as removing friction: when an AI is deciding between your store and a competitor it understands equally well on product, the store that handed it a clear summary is easier to cite with confidence. It is one input among many, and a cheap one.</p>
+
+    <div class="guide-cta">
+      <h2>Run your free audit</h2>
+      <p>Checklane checks whether your site has an llms.txt, plus every other signal AI shoppers read. Paste any public URL for your free 0-100 score.</p>
+      <p><a class="btn" href="/#audit">Get my free score</a></p>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <p><span class="brand-mark">▦</span> Checklane helps small businesses get found by AI shoppers.</p>
+    <p class="micro footer-links"><a href="/guides">Guides</a> &middot; <a href="/services">Services</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/refund">Refund policy</a></p>
+    <p class="micro">Checklane grades what&rsquo;s technically verifiable about your site
+      at audit time. A score is not a promise of sales or AI recommendations.</p>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -25,6 +25,27 @@
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
+
+  <url>
+    <loc>https://getchecklane.com/guides/chatgpt-product-recommendations</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://getchecklane.com/guides/llms-txt-guide</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://getchecklane.com/guides/robots-txt-ai-crawlers</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://getchecklane.com/guides/shopify-ai-readiness</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
   <url>
     <loc>https://getchecklane.com/services</loc>
     <changefreq>monthly</changefreq>
