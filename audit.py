@@ -849,6 +849,11 @@ def audit(domain):
         # Dogfood lesson: Search Console flags missing shippingDetails and
         # hasMerchantReturnPolicy inside offers as merchant-listing issues.
         # Scores only move up: these add points, never subtract.
+        # RC-2 (Board m4): a stub with only @type and no content earns
+        # nothing; merchants must state something real to score.
+        def _has_content(node):
+            return (isinstance(node, dict)
+                    and any(k != "@type" for k in node.keys()))
         _offer_nodes = []
         for _n in product_nodes:
             _offs = _n.get("offers")
@@ -856,8 +861,10 @@ def audit(domain):
                 _offer_nodes.append(_offs)
             elif isinstance(_offs, list):
                 _offer_nodes.extend(o for o in _offs if isinstance(o, dict))
-        _has_ship = any(o.get("shippingDetails") for o in _offer_nodes)
-        _has_ret = any(o.get("hasMerchantReturnPolicy") for o in _offer_nodes)
+        _has_ship = any(_has_content(o.get("shippingDetails"))
+                        for o in _offer_nodes)
+        _has_ret = any(_has_content(o.get("hasMerchantReturnPolicy"))
+                       for o in _offer_nodes)
         if _has_ship and _has_ret:
             s += 2
             checks.append(check("merchant-listing-details",
@@ -899,7 +906,7 @@ def audit(domain):
         # fabricated social proof.
         if any(n.get("aggregateRating") or n.get("review")
                for n in product_nodes):
-            checks.append(check("review-signals", "Real review labels found",
+            checks.append(check("review-signals", "Review labels found",
                                 "pass", "Your products carry review labels "
                                 "(aggregateRating/review). Google can show "
                                 "your ratings in search results.", None))

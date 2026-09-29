@@ -696,12 +696,20 @@ print("== v1.1.0-m4: merchant-listing details + review signals ==")
 MERCHANT_FULL_LD = ('<script type="application/ld+json">{"@context":"https://schema.org",'
     '"@type":"Product","name":"Gadget","sku":"G-1",'
     '"offers":{"@type":"Offer","price":"49.99","priceCurrency":"USD",'
-    '"shippingDetails":{"@type":"OfferShippingDetails"},'
-    '"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy"}}}</script>')
+    '"shippingDetails":{"@type":"OfferShippingDetails",'
+    '"shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"}},'
+    '"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy",'
+    '"url":"https://x.example/refund"}}}</script>')
 MERCHANT_ONE_LD = ('<script type="application/ld+json">{"@context":"https://schema.org",'
     '"@type":"Product","name":"Gadget","sku":"G-1",'
     '"offers":{"@type":"Offer","price":"49.99","priceCurrency":"USD",'
-    '"shippingDetails":{"@type":"OfferShippingDetails"}}}</script>')
+    '"shippingDetails":{"@type":"OfferShippingDetails",'
+    '"shippingRate":{"@type":"MonetaryAmount","value":"0","currency":"USD"}}}}</script>')
+MERCHANT_STUB_LD = ('<script type="application/ld+json">{"@context":"https://schema.org",'
+    '"@type":"Product","name":"Gadget","sku":"G-1",'
+    '"offers":{"@type":"Offer","price":"49.99","priceCurrency":"USD",'
+    '"shippingDetails":{"@type":"OfferShippingDetails"},'
+    '"hasMerchantReturnPolicy":{"@type":"MerchantReturnPolicy"}}}</script>')
 REVIEW_LD = ('<script type="application/ld+json">{"@context":"https://schema.org",'
     '"@type":"Product","name":"Rated","sku":"R-1",'
     '"aggregateRating":{"@type":"AggregateRating","ratingValue":"4.8","reviewCount":"12"},'
@@ -720,6 +728,8 @@ audit.fetch = make_m2_fetch(make_store_home(MERCHANT_ONE_LD))
 rep_one = audit.audit("127.0.0.1")
 audit.fetch = make_m2_fetch(make_store_home(REVIEW_LD))
 rep_rev = audit.audit("127.0.0.1")
+audit.fetch = make_m2_fetch(make_store_home(MERCHANT_STUB_LD))
+rep_stub = audit.audit("127.0.0.1")
 
 check("merchant-listing-details passes when both fields present",
       check_status(rep_full, "Product info AI can read",
@@ -733,6 +743,11 @@ check("one merchant field -> partial",
 check("one merchant field adds exactly 1 point",
       c2of(rep_one)["score"] - c2of(rep_base)["score"] == 1,
       "%s vs %s" % (c2of(rep_one)["score"], c2of(rep_base)["score"]))
+check("type-only stubs earn nothing (RC-2: no gaming empty markup)",
+      check_status(rep_stub, "Product info AI can read",
+                   "merchant-listing-details") == "partial"
+      and c2of(rep_stub)["score"] - c2of(rep_base)["score"] == 0,
+      "%s vs %s" % (c2of(rep_stub)["score"], c2of(rep_base)["score"]))
 check("no merchant fields -> partial with no points and low severity",
       check_status(rep_base, "Product info AI can read",
                    "merchant-listing-details") == "partial")
