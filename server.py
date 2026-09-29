@@ -831,7 +831,7 @@ class Handler(BaseHTTPRequestHandler):
             # Legal pages (C6). The site workstream owns static/legal/*.html;
             # routes stay 404-safe until the files land.
             return self._serve_file("legal/" + path[1:] + ".html")
-        if path in ("/guides", "/guides/"):
+        if path in ("/guides", "/guides/", "/guides/index.html"):
             # Guides index (added 2026-09-28).
             return self._serve_file("guides/index.html")
         if path in ("/guides/ai-shopping-agent-readiness",
