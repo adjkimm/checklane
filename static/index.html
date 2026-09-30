@@ -122,7 +122,6 @@
     <a class="brand" href="#top"><span class="brand-mark">▦</span> Checklane</a>
     <nav class="nav-links">
       <a href="#how">How it works</a>
-      <a href="#teaser">What&rsquo;s inside</a>
       <a href="#checks">What we check</a>
       <a href="#faq">FAQ</a>
     </nav>
@@ -190,51 +189,6 @@
           <p>All 59 checks explained, every fix ranked by what matters most for
             your site. Yours to keep.</p>
         </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ INSIDE THE FULL REPORT ============ -->
-  <section class="section section-alt" id="teaser">
-    <div class="wrap">
-      <p class="kicker">Peek inside</p>
-      <h2>See your site the way AI shoppers see it</h2>
-      <p class="section-sub">AI agents are about to start shopping for your customers, and they will buy from the sites they can read best. The $9 report runs 59 secret-shopper diagnostics on your site, one diagnostic each, and shows you exactly where you stand and what to fix, finding by finding, so you are ready before your competitors are. About fifteen cents a diagnostic.</p>
-      <div class="report-card">
-        <p style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#5b6b7c;margin:0 0 8px;">Real finding, from a $9 report on getchecklane.com</p>
-        <div style="background:#fff;border:1px solid #e2e9f0;border-radius:12px;padding:16px 18px;margin:0 0 20px;">
-          <p style="margin:0 0 4px;font-size:13px;color:#5b6b7c;">Category: <strong style="color:#16202b;">AI checkout handshake (UCP + ACP): 2/20</strong></p>
-          <p style="margin:0 0 10px;"><span style="display:inline-block;font-size:12px;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;border-radius:999px;padding:2px 10px;margin-right:8px;">Real gap</span><strong>No UCP checkout file found</strong></p>
-          <p style="margin:0 0 8px;"><strong>What it means:</strong> We checked the standard discovery paths (starting with the canonical /.well-known/ucp). Nothing there. Note: this is the faster machine path for UCP-capable agents, not a prerequisite. Browser-driving agents buy through normal checkout today.</p>
-          <p style="margin:0 0 4px;"><strong>How to fix it:</strong></p>
-          <div style="position:relative;">
-            <div style="filter:blur(5px);user-select:none;pointer-events:none;" aria-hidden="true">
-              <ol style="margin:4px 0 10px 20px;padding:0;">
-                <li style="margin-bottom:6px;">Publish your UCP capability profile at /.well-known/ucp (extensionless: the canonical discovery path in the UCP spec; /.well-known/ucp.json also works as a fallback). Be honest about the work: the file itself is hours, but a real UCP implementation (working REST endpoints, payment handlers with signing keys, order webhooks) is days to weeks of backend engineering. A static JSON pointing at dead endpoints is worse than none. Platform shortcuts: on Shopify, turn on Shopify&rsquo;s Agentic sales channel / AI tools. They publish the manifest for you (fast path). On a custom build, scope it as a backend project (days to weeks), not an afternoon task.</li>
-              </ol>
-            </div>
-            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">
-              <a href="#audit" style="display:inline-block;background:#16202b;color:#fff;font-size:14px;font-weight:600;padding:10px 20px;border-radius:999px;text-decoration:none;">Get the full report: $9</a>
-              <span style="font-size:12px;color:#5b6b7c;">The fix steps come with the full report.</span>
-            </div>
-          </div>
-        </div>
-        <p style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#5b6b7c;margin:0 0 8px;">Action plan, from the same report</p>
-        <div style="background:#fff;border:1px solid #e2e9f0;border-radius:12px;padding:16px 18px;margin:0 0 20px;">
-          <p style="margin:0 0 8px;"><strong>Phase 1: highest leverage</strong></p>
-          <div style="overflow-x:auto;">
-          <table style="width:100%;min-width:430px;border-collapse:collapse;font-size:14px;">
-            <tr><th style="text-align:left;padding:8px 8px 8px 0;border-bottom:1px solid #eef2f6;color:#5b6b7c;font-weight:600;">#</th><th style="text-align:left;padding:8px;border-bottom:1px solid #eef2f6;color:#5b6b7c;font-weight:600;">Fix</th><th style="text-align:left;padding:8px;border-bottom:1px solid #eef2f6;color:#5b6b7c;font-weight:600;">Who</th><th style="text-align:left;padding:8px;border-bottom:1px solid #eef2f6;color:#5b6b7c;font-weight:600;">Effort</th></tr>
-            <tr><td style="padding:10px 8px 10px 0;border-bottom:1px solid #eef2f6;vertical-align:top;">1</td><td style="padding:10px 8px;border-bottom:1px solid #eef2f6;vertical-align:top;"><strong>Publish your UCP checkout file</strong><br><span style="font-size:13px;color:#5b6b7c;">The machine path for UCP-capable agents. Scoped honestly: days to weeks.</span></td><td style="padding:10px 8px;border-bottom:1px solid #eef2f6;vertical-align:top;">Developer</td><td style="padding:10px 8px;border-bottom:1px solid #eef2f6;vertical-align:top;">Days&ndash;weeks</td></tr>
-            <tr><td style="padding:10px 8px 10px 0;vertical-align:top;color:#5b6b7c;">&hellip;</td><td colspan="3" style="padding:10px 8px;vertical-align:top;color:#5b6b7c;font-size:13px;">every other finding the audit turns up, phased by impact</td></tr>
-          </table>
-          </div>
-          <p class="micro" style="margin:10px 0 0;">The full plan phases every finding by impact: highest leverage first, then this month, then ongoing. Nothing skipped.</p>
-        </div>
-        <p class="micro">Real excerpt from a $9 report run on getchecklane.com. Yours is generated from your own site&rsquo;s audit.</p>
-        <p class="micro">Run the free audit above to get your own score. The full
-          report is available after payment. Covered by our delivery guarantee
-          (<a href="/refund">refund policy</a>).</p>
       </div>
     </div>
   </section>
@@ -349,27 +303,6 @@
             machine handshake is in place.</p>
         </details>
       </div>
-    </div>
-  </section>
-
-  <!-- ============ BETA WAITING LIST ============ -->
-  <section class="section" id="beta">
-    <div class="wrap">
-      <h2>Want us to keep watch?</h2>
-      <p class="section-sub">AI changes fast, and a site that&rsquo;s readable
-        today can silently break tomorrow. We&rsquo;re building ongoing
-        monitoring for small businesses: regular checks that AI shoppers can still
-        find your products, alerts when AI visits your site, and a Checklane
-        badge showing the audit date and exactly what was tested. The badge is
-        an attestation of what we checked. It is not approval, endorsement,
-        or a guarantee. Join the waiting list, and we&rsquo;ll let you in first.</p>
-      <form id="beta-form" class="beta-form" autocomplete="on">
-        <input id="beta-name" name="name" type="text" placeholder="Your name" aria-label="Your name">
-        <input id="beta-email" name="email" type="email" placeholder="you@yoursite.com" aria-label="Email">
-        <button type="submit" class="btn">Join the waiting list</button>
-      </form>
-      <div class="field-err" id="beta-err"></div>
-      <p class="micro" id="beta-done" hidden>You&rsquo;re on the list, and we&rsquo;ll reach out when the beta opens.</p>
     </div>
   </section>
 
