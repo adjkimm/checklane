@@ -743,6 +743,9 @@ def render_report(report):
         audit_date, report_id = "", ""
     headline, oneliner, _ = _band(score)
     ring = _ring_color(score)
+    check_count = report.get("check_count",
+                             sum(len(c.get("checks", []))
+                                 for c in report.get("categories", [])))
 
     return """<!DOCTYPE html>
 <html lang="en">
@@ -762,6 +765,7 @@ def render_report(report):
     <div class="wordmark">CHECK<span>LANE</span></div>
     <h1>AI-Readiness Report</h1>
     <div class="meta">%s &nbsp;·&nbsp; Audited %s &nbsp;·&nbsp; Report %s</div>
+    <div class="meta">This report ran %d checks on %s.</div>
   </header>
   <div class="score-hero">
     <div class="score-ring" style="background:conic-gradient(%s 0 %s%%, #e7e0d3 %s%% 100%%)">
@@ -794,6 +798,7 @@ def render_report(report):
 </html>""" % (
         _esc(domain), _CSS,
         _esc(domain), _esc(audit_date), _esc(report_id),
+        check_count, _esc(domain),
         ring, _esc(score), _esc(score),
         _esc(score), _esc(headline), ring, _esc(grade),
         _esc(report.get("summary", "")),
