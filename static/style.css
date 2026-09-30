@@ -63,6 +63,22 @@ section[id] { scroll-margin-top: 64px; }
 .section h2 { font-size: 1.9rem; margin: 0 0 8px; }
 .section-sub { color: var(--muted); margin: 0 0 28px; }
 
+/* crawler coverage strip: text wordmarks only, CSS-only marquee */
+.logo-strip { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  background: var(--bg); padding: 16px 0 14px; text-align: center; overflow: hidden; }
+.logo-strip-label { font-size: .78rem; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); margin: 0 0 10px; }
+.logo-marquee { overflow: hidden; }
+.logo-track { display: inline-flex; width: max-content;
+  animation: logo-scroll 45s linear infinite; }
+.logo-track span { color: #8a94a1; font-weight: 600; font-size: 1.02rem;
+  padding: 0 30px; white-space: nowrap; }
+@keyframes logo-scroll { to { transform: translateX(-50%); } }
+.logo-marquee:hover .logo-track { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .logo-track { animation: none; } }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
 .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 28px; }
 .step { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
   padding: 24px; }
@@ -203,6 +219,7 @@ section[id] { scroll-margin-top: 64px; }
   .svc-form .row2 { grid-template-columns: 1fr; }
   .svc-form .btn { width: 100%; justify-self: stretch; }
   .score-row { flex-direction: column; text-align: center; }
+  .logo-track span { padding: 0 20px; font-size: .95rem; }
   .report-card { padding: 20px 16px; }
   .faq details { padding: 12px 14px; }
   .faq summary { padding: 6px 0; }
