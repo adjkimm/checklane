@@ -48,24 +48,8 @@
       '<div class="field-err" id="buy-err"></div></div>';
   }
 
-  function messageBox(domain) {
-    return '<div class="gate gate-alt"><h3>Questions first?</h3>' +
-      "<p>Have a question before you buy? Send us a message and we&rsquo;ll get back to you.</p>" +
-      '<form id="message-form" autocomplete="on">' +
-      '<div class="row2"><div><label for="message-name">Your name</label>' +
-      '<input id="message-name" name="name" type="text" placeholder="Jordan Lee"></div>' +
-      "<div><label for='message-email'>Email</label>" +
-      '<input id="message-email" name="email" type="email" placeholder="you@yoursite.com"></div></div>' +
-      '<div><label for="message-text">Message</label>' +
-      '<textarea id="message-text" name="message" placeholder="What would you like to know about your score?"></textarea></div>' +
-      '<div class="field-err" id="message-err"></div>' +
-      '<button type="submit" class="btn">Send message</button></form>' +
-      '<p class="micro" id="message-done" hidden>Message sent. We&rsquo;ll get back to you soon.</p></div>';
-  }
-
   function scoreCard(report, minimal) {
-    var ctas = minimal ? "" : buyBox(report.domain) + messageBox(report.domain) +
-      sharePrompt();
+    var ctas = minimal ? "" : buyBox(report.domain) + sharePrompt();
     return '<div class="report-card">' +
       '<div class="score-row">' + scoreRing(report.score) +
       '<div class="score-meta"><h3><span class="grade grade-' + report.grade + '">' +
@@ -279,12 +263,18 @@
       if (cfg && cfg.price_display) PRICE_DISPLAY = cfg.price_display;
     }).catch(function () {});
 
-    $("audit-form").addEventListener("submit", function (e) {
-      e.preventDefault();
-      var d = $("audit-domain").value.trim();
-      if (!d) return;
-      runAudit(d);
-    });
+    var auditForm = $("audit-form");
+    if (auditForm) {
+      auditForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var d = $("audit-domain").value.trim();
+        if (!d) return;
+        runAudit(d);
+      });
+    }
+
+    // Contact page message form (guarded inside).
+    wireMessageForm();
 
     // Beta waiting list form (landing-page section).
     var betaForm = $("beta-form");
