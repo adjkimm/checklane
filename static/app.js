@@ -121,7 +121,7 @@
         if (r.status === 429 && attempts < 2) {
           // Audit servers are busy: hold the user's place and retry once
           // automatically instead of showing a dead-end error.
-          statusEl.textContent = "Many sites being checked right now \u2014 retrying automatically\u2026";
+          statusEl.textContent = "Many sites being checked right now. Retrying automatically\u2026";
           setTimeout(attempt, 12000);
           return null;
         }
@@ -146,11 +146,19 @@
         resultEl.scrollIntoView({ behavior: "smooth", block: "start" });
       })
       .catch(function (err) {
+        if (window.console && console.warn) console.warn("audit request failed:", err);
+        if (attempts < 2) {
+          // Transient network or proxy blip (e.g. a deploy restart):
+          // hold the user's place and retry once automatically.
+          // The status lines keep cycling while we wait.
+          setTimeout(attempt, 8000);
+          return;
+        }
         clearInterval(statusTimer);
         statusEl.hidden = true;
         resultEl.hidden = false;
         resultEl.innerHTML = '<div class="err"><strong>Couldn\u2019t check your site:</strong> ' +
-          esc(String(err)) + "</div>";
+          "Something went wrong on our end. Please try again in a minute.</div>";
       });
     }
     attempt();
@@ -185,7 +193,7 @@
         .catch(function (err) {
           btn.disabled = false;
           btn.innerHTML = label;
-          $("buy-err").textContent = "Something went wrong: " + err;
+          $("buy-err").textContent = "Something went wrong starting checkout. Please try again.";
         });
     });
   }
@@ -255,7 +263,7 @@
         .catch(function (err) {
           btn.disabled = false;
           btn.textContent = "Send message";
-          $("message-err").textContent = "Something went wrong: " + err;
+          $("message-err").textContent = "Something went wrong sending your message. Please try again.";
         });
     });
   }
@@ -311,7 +319,7 @@
           })
           .catch(function (err) {
             btn.disabled = false;
-            $("beta-err").textContent = "Something went wrong: " + err;
+            $("beta-err").textContent = "Something went wrong. Please try again.";
           });
       });
     }
@@ -352,7 +360,7 @@
           .catch(function (err) {
             btn.disabled = false;
             btn.textContent = "Message us";
-            $("svc-err").textContent = "Something went wrong: " + err;
+            $("svc-err").textContent = "Something went wrong sending your message. Please try again.";
           });
       });
     }
