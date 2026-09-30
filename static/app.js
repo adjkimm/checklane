@@ -32,10 +32,14 @@
   /* ---------------- report rendering ---------------- */
   /* Free version: the main score only. The full report is available after payment,
      or visitors can send a pre-sales question through the message box. */
-  function buyBox(domain) {
+  function buyBox(domain, checkCount) {
+    var countLine = (typeof checkCount === "number" && checkCount > 0)
+      ? "<p>This audit ran " + checkCount + " checks on your site.</p>"
+      : "";
     return '<div class="gate"><h3>Get the full report</h3>' +
       "<p>Your score is free. The full report has every check and every fix, " +
       "ranked by what matters most for <strong>" + esc(domain) + "</strong>.</p>" +
+      countLine +
       '<div class="peek"><p class="peek-cap">A peek inside the report:</p>' +
       '<ul class="fix-preview"><li><span class="sev sev-high">High</span> Add structured product data <span class="redact">████████████</span></li>' +
       '<li><span class="sev sev-medium">Medium</span> Publish your sitemap <span class="redact">████████</span></li>' +
@@ -49,7 +53,7 @@
   }
 
   function scoreCard(report, minimal) {
-    var ctas = minimal ? "" : buyBox(report.domain) + sharePrompt();
+    var ctas = minimal ? "" : buyBox(report.domain, report.check_count) + sharePrompt();
     return '<div class="report-card">' +
       '<div class="score-row">' + scoreRing(report.score) +
       '<div class="score-meta"><h3><span class="grade grade-' + report.grade + '">' +
