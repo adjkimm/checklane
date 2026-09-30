@@ -460,6 +460,7 @@ def _section_action_plan(report):
                [f for f in fixes if f.get("severity") == "low"])]
     out = ['<p>Every finding with a fix is listed below. Nothing skipped. '
            'ranked by impact, with who can do it and an honest effort estimate. '
+           'The fixes most likely to unblock AI shoppers come first. '
            'Copy-paste templates and per-platform paths are in §4.</p>']
     n = 0
     for title, items in phases:
