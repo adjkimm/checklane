@@ -14,6 +14,7 @@ Stdlib only. No paid APIs. Read-only fetches of the submitted domain only.
 Run:  python3 audit.py example.com
 """
 
+import concurrent.futures
 import json
 import ipaddress
 import re
@@ -41,43 +42,143 @@ NORMAL_UA = ("ChecklaneAuditBot/1.0 (+https://checklane.example/audit; "
 # product feeds. This check measures crawler/fetcher access only.
 AGENT_UAS = {
     # label -> (user-agent string, what-it-is note)
+    # Every UA below is documented by its vendor (source URLs in
+    # docs/ai-agent-sources-2026-09-30.md). Chrome/W.X.Y.Z placeholders from
+    # vendor docs are filled with a real current Chrome version.
     "GPTBot (OpenAI training crawler)": (
         "Mozilla/5.0 (compatible; GPTBot/1.2; +https://openai.com/gptbot)",
         "trains OpenAI models; blocking it does NOT block ChatGPT shopping"),
     "OAI-SearchBot (ChatGPT search fetcher)": (
         "Mozilla/5.0 (compatible; OAI-SearchBot/1.0; +https://openai.com/bot.html)",
         "fetches pages for ChatGPT search answers"),
+    "ChatGPT-User (ChatGPT on-demand fetch)": (
+        "Mozilla/5.0 (compatible; ChatGPT-User/1.0; +https://openai.com/bot.html)",
+        "fetches a page when a ChatGPT user asks about it"),
     "ClaudeBot (Anthropic training crawler)": (
         "Mozilla/5.0 (compatible; ClaudeBot/1.0)",
         "trains Anthropic models; blocking it does NOT block Claude shopping"),
     "Claude-SearchBot (Claude search fetcher)": (
         "Mozilla/5.0 (compatible; Claude-SearchBot/1.0)",
         "fetches pages for Claude search answers"),
-    "CCBot (Common Crawl dataset)": (
-        "CCBot/2.0 (https://commoncrawl.org/faq/)",
-        "open-dataset crawl used to train many models"),
-    "PerplexityBot (Perplexity discovery)": (
-        "Mozilla/5.0 (compatible; PerplexityBot/1.0; +https://perplexity.ai)",
-        "discovers pages for Perplexity answers"),
-    "ChatGPT-User (ChatGPT on-demand fetch)": (
-        "Mozilla/5.0 (compatible; ChatGPT-User/1.0; +https://openai.com/bot.html)",
-        "fetches a page when a ChatGPT user asks about it"),
+    "Claude-User (Claude on-demand fetch)": (
+        "Mozilla/5.0 (compatible; Claude-User/1.0)",
+        "fetches a page when a Claude user asks about it"),
     "GoogleOther (Google AI crawling)": (
         "Mozilla/5.0 (compatible; GoogleOther/1.0)",
         "Google's AI-feature crawling"),
     "Google-Agent (Google agentic fetch)": (
-        "Mozilla/5.0 (compatible; Google-Agent/1.0)",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like "
+        "Gecko; compatible; Google-Agent; "
+        "+https://developers.google.com/crawling/docs/crawlers-fetchers/google-agent) "
+        "Chrome/126.0.0.0 Safari/537.36",
         "Google's agent-mode fetcher; does NOT honor robots.txt blocking"),
+    "Meta-ExternalAgent (Meta AI training)": (
+        "meta-externalagent/1.1 "
+        "(+https://developers.facebook.com/docs/sharing/webmasters/crawler)",
+        "crawls for Meta AI model training and indexing; honors robots.txt"),
+    "Meta-ExternalFetcher (Meta user fetch)": (
+        "meta-externalfetcher/1.1 "
+        "(+https://developers.facebook.com/docs/sharing/webmasters/crawler)",
+        "fetches pages when a Meta AI user asks; may bypass robots.txt"),
+    "Meta-WebIndexer (Meta AI search)": (
+        "meta-webindexer/1.1 "
+        "(+https://developers.facebook.com/docs/sharing/webmasters/crawler)",
+        "indexes pages for Meta AI search answers; honors robots.txt"),
+    "Applebot (Apple search and AI)": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 "
+        "Safari/605.1.15 (Applebot/0.1; +http://www.apple.com/go/applebot)",
+        "powers Siri, Spotlight and Safari search; data may also train "
+        "Apple Intelligence"),
+    "PerplexityBot (Perplexity discovery)": (
+        "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; "
+        "PerplexityBot/1.0; +https://perplexity.ai/perplexitybot)",
+        "discovers pages for Perplexity answers"),
+    "Perplexity-User (Perplexity on-demand fetch)": (
+        "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; "
+        "Perplexity-User/1.0; +https://perplexity.ai/perplexity-user)",
+        "fetches a page when a Perplexity user asks; generally ignores "
+        "robots.txt"),
+    "CCBot (Common Crawl dataset)": (
+        "CCBot/2.0 (https://commoncrawl.org/faq/)",
+        "open-dataset crawl used to train many models"),
+    "AI2Bot (Allen Institute research)": (
+        "Mozilla/5.0 (compatible) AI2Bot (+https://www.allenai.org/crawler)",
+        "research crawl that trains open language models"),
+    "Bytespider (ByteDance training)": (
+        "Mozilla/5.0 (Linux; Android 5.0) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Mobile Safari/537.36 "
+        "(compatible; Bytespider; spider-feedback@bytedance.com)",
+        "collects content for ByteDance model training; widely observed in "
+        "the wild, no vendor documentation published"),
+    "YouBot (You.com search)": (
+        "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; "
+        "YouBot/1.0; +https://docs.you.com/youbot; env:prod) "
+        "Chrome/142.0.0.0 Safari/537.36",
+        "indexes pages for You.com search answers"),
+    "DuckAssistBot (DuckDuckGo AI answers)": (
+        "DuckAssistBot/1.2; (+http://duckduckgo.com/duckassistbot.html)",
+        "crawls pages in real time for DuckDuckGo AI-assisted answers; "
+        "not used for training"),
+    "MistralAI-User (Mistral on-demand fetch)": (
+        "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; "
+        "MistralAI-User/1.0; +https://docs.mistral.ai/robots)",
+        "visits pages when a Mistral user asks; not used for crawling "
+        "or training"),
+    "MistralAI-Index (Mistral search index)": (
+        "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; "
+        "MistralAI-Index/1.0; +https://docs.mistral.ai/robots)",
+        "indexes pages for Mistral search; not used for training"),
+    "MistralAI-Training (Mistral training)": (
+        "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; "
+        "MistralAI-Training/1.0; +https://docs.mistral.ai/robots)",
+        "crawls content to train Mistral models"),
+    "Amazonbot (Amazon AI and products)": (
+        "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; "
+        "Amazonbot/0.1) Chrome/126.0.0.0 Safari/537.36",
+        "improves Amazon products and services; may train Amazon AI models"),
+    "Amzn-SearchBot (Alexa search)": (
+        "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; "
+        "Amzn-SearchBot/0.1) Chrome/126.0.0.0 Safari/537.36",
+        "indexes pages for Alexa and Amazon search experiences; not "
+        "for training"),
+    "Amzn-User (Alexa on-demand fetch)": (
+        "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; "
+        "Amzn-User/0.1) Chrome/126.0.0.0 Safari/537.36",
+        "fetches pages for Alexa answers; may not follow all robots.txt "
+        "rules"),
+    "KimiBot (Kimi training)": (
+        "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; "
+        "KimiBot/1.0; +https://www.kimi.com/policies/kimi-crawlers",
+        "crawls content that may train Kimi's foundation models"),
+    "Kimi-SearchBot (Kimi search index)": (
+        "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; "
+        "Kimi-SearchBot/1.0; +https://www.kimi.com/policies/kimi-crawlers",
+        "builds the index behind Kimi search features"),
+    "Kimi-User (Kimi on-demand fetch)": (
+        "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; "
+        "Kimi-User/1.0; +https://www.kimi.com/policies/kimi-crawlers",
+        "fetches pages when a Kimi user asks; user-triggered, robots.txt "
+        "may not apply"),
 }
 
 # robots.txt tokens that control AI-crawler access.
-# NOTE: Google-Agent is deliberately absent — it does not honor robots.txt,
-# so claiming a "blocked" posture for it would be false.
+# NOTE: Google-Agent, Meta-ExternalFetcher, Perplexity-User, Amzn-User and
+# Kimi-User are deliberately absent — their vendors document them as
+# user-triggered fetchers that may bypass or ignore robots.txt, so claiming
+# a "blocked" posture for them would be false. (Google-Extended and
+# Applebot-Extended are control-only tokens that never crawl; they stay here
+# only so posture rules written for them are reported.)
 AI_CRAWLER_TOKENS = [
     "gptbot", "oai-searchbot", "google-extended", "googleother",
-    "claudebot", "claude-searchbot", "ccbot",
+    "claudebot", "claude-searchbot", "claude-user", "ccbot", "ai2bot",
     "perplexitybot", "chatgpt-user", "anthropic-ai", "cohere-ai",
-    "bytespider", "amazonbot",
+    "bytespider", "youbot", "duckassistbot",
+    "mistralai-user", "mistralai-index", "mistralai-training",
+    "amazonbot", "amzn-searchbot",
+    "meta-externalagent", "meta-webindexer",
+    "applebot", "kimibot", "kimi-searchbot",
+    "firecrawlagent",
 ]
 
 # Candidate discovery locations for a UCP capability profile.
@@ -1160,9 +1261,20 @@ def audit(domain):
                             "PerplexityBot, ChatGPT-User) through, or they can't "
                             "include your pages in AI answers.", "high"))
     per_ua = round(cmax / len(AGENT_UAS), 2)
-    for label, (ua, role) in AGENT_UAS.items():
+    # Fetch each agent UA in parallel (polite delay kept inside each worker).
+    # Results are consumed in AGENT_UAS order so check output stays stable.
+    def _agent_fetch(item):
+        label, (ua, _role) = item
         r = fetch(base + "/", ua=ua)
         polite()
+        return label, r
+
+    agent_results = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
+        for label, r in pool.map(_agent_fetch, list(AGENT_UAS.items())):
+            agent_results[label] = r
+    for label, (ua, role) in AGENT_UAS.items():
+        r = agent_results[label]
         blocked, reason = False, ""
         if r["status"] is None:
             blocked, reason = True, "request failed (%s)" % r["error"]

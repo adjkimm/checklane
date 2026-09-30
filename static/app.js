@@ -81,7 +81,7 @@
     "Opening your homepage\u2026",
     "Checking your sitemap and site rules\u2026",
     "Reading your product info\u2026",
-    "Visiting as nine AI crawlers and fetchers\u2026",
+    "Visiting as 28 AI crawlers and fetchers\u2026",
     "Seeing if AI can read your pages\u2026",
     "Building your fix list\u2026"
   ];
