@@ -30,7 +30,7 @@
   var PRICE_DISPLAY = "$9"; // updated from /api/config on load
 
   /* ---------------- report rendering ---------------- */
-  /* Free version: the main score only. The full report unlocks after payment,
+  /* Free version: the main score only. The full report is available after payment,
      or visitors can send a pre-sales question through the message box. */
   function buyBox(domain) {
     return '<div class="gate"><h3>Get the full report</h3>' +
