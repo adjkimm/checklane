@@ -15,6 +15,7 @@ Run:  python3 audit.py example.com
 """
 
 import concurrent.futures
+import datetime
 import json
 import ipaddress
 import re
@@ -274,12 +275,17 @@ _OPENER = urllib.request.build_opener(_SafeRedirectHandler)
 
 
 def fetch(url, ua=NORMAL_UA, timeout=FETCH_TIMEOUT):
-    """GET url. Returns dict(status, headers, body, final_url, error)."""
+    """GET url. Returns dict(status, headers, body, final_url, error, elapsed).
+
+    elapsed is wall-clock seconds for the request (time to first byte is not
+    separated from connection setup; used only for coarse latency checks).
+    """
     req = urllib.request.Request(url, headers={
         "User-Agent": ua,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.5",
     })
+    t0 = time.time()
     try:
         with _OPENER.open(req, timeout=timeout) as resp:
             raw = resp.read(MAX_BODY + 1)
@@ -291,6 +297,7 @@ def fetch(url, ua=NORMAL_UA, timeout=FETCH_TIMEOUT):
                 "truncated": len(raw) > MAX_BODY,
                 "final_url": resp.geturl(),
                 "error": None,
+                "elapsed": round(time.time() - t0, 2),
             }
     except urllib.error.HTTPError as e:
         try:
@@ -299,11 +306,13 @@ def fetch(url, ua=NORMAL_UA, timeout=FETCH_TIMEOUT):
             body = ""
         return {"status": e.code, "headers": dict(e.headers or {}),
                 "body": body, "truncated": False,
-                "final_url": url, "error": None}
+                "final_url": url, "error": None,
+                "elapsed": round(time.time() - t0, 2)}
     except Exception as e:  # timeout, DNS, TLS, connection refused...
         return {"status": None, "headers": {}, "body": "",
                 "truncated": False, "final_url": url,
-                "error": "%s: %s" % (type(e).__name__, e)}
+                "error": "%s: %s" % (type(e).__name__, e),
+                "elapsed": round(time.time() - t0, 2)}
 
 
 def polite():
@@ -328,10 +337,14 @@ class SiteHTMLParser(HTMLParser):
         self.script_srcs = 0
         self.text_chunks = []
         self._skip = 0          # inside script/style
+        self.imgs = []          # (alt or None) per <img> tag
+        self.html_lang = ""     # lang attribute of <html>
 
     def handle_starttag(self, tag, attrs):
         a = dict(attrs)
-        if tag in ("script", "style"):
+        if tag == "html":
+            self.html_lang = (a.get("lang") or "").strip().lower()
+        elif tag in ("script", "style"):
             self._skip += 1
             if tag == "script":
                 self.script_srcs += 1
@@ -350,6 +363,8 @@ class SiteHTMLParser(HTMLParser):
             self.h1_count += 1
         elif tag == "a" and a.get("href"):
             self.links.append(a["href"])
+        elif tag == "img":
+            self.imgs.append(a.get("alt"))
 
     def handle_endtag(self, tag):
         if tag in ("script", "style"):
@@ -580,16 +595,22 @@ def _page_title(body):
 def _discover_sitemap(base):
     """Fetch /sitemap.xml; follow sitemap indexes to find product URLs.
 
-    Returns dict(ok, is_index, url_count, product_url_count, first_product_url).
+    Returns dict(ok, is_index, url_count, product_url_count, first_product_url,
+    lastmods). lastmods is a list of <lastmod> date strings (up to 2000).
     """
     import html as _html
     info = {"ok": False, "is_index": False, "url_count": 0,
-            "product_url_count": 0, "first_product_url": None}
+            "product_url_count": 0, "first_product_url": None,
+            "lastmods": []}
 
     def _locs(body, cap=300_000):
         return [_html.unescape(u) for u in
                 re.findall(r"<loc>\s*([^<]+?)\s*</loc>", body[:cap],
                            flags=re.IGNORECASE)]
+
+    def _lastmods(body, cap=300_000):
+        return re.findall(r"<lastmod>\s*([^<]+?)\s*</lastmod>", body[:cap],
+                          flags=re.IGNORECASE)[:2000]
 
     sm = fetch(base + "/sitemap.xml", ua=NORMAL_UA)
     polite()
@@ -612,6 +633,7 @@ def _discover_sitemap(base):
                 prods = [u for u in urls if "/product" in u.lower()]
                 info["product_url_count"] = len(prods)
                 info["first_product_url"] = prods[0] if prods else None
+                info["lastmods"] = _lastmods(cs["body"])
                 info["ok"] = True
         return info
     if "<url" in head:
@@ -620,6 +642,7 @@ def _discover_sitemap(base):
         prods = [u for u in urls if "/product" in u.lower() or "/shop" in u.lower()]
         info["product_url_count"] = len(prods)
         info["first_product_url"] = prods[0] if prods else None
+        info["lastmods"] = _lastmods(sm["body"])
         info["ok"] = True
         return info
     info["status"] = sm["status"]
@@ -705,7 +728,8 @@ def audit(domain):
             "domain": domain, "score": 0, "grade": "F",
             "error": "Could not reach %s (%s). Check the domain and try again."
                      % (domain, home["error"]),
-            "categories": [], "fixes": [], "fetched_at": int(time.time()),
+            "categories": [], "fixes": [], "check_count": 0,
+            "fetched_at": int(time.time()),
             "engine": "checklane-audit/" + VERSION,
         }
     if home["status"] >= 400:
@@ -713,7 +737,8 @@ def audit(domain):
             "domain": domain, "score": 0, "grade": "F",
             "error": "Homepage returned HTTP %s. The audit cannot score an unreachable site."
                      % home["status"],
-            "categories": [], "fixes": [], "fetched_at": int(time.time()),
+            "categories": [], "fixes": [], "check_count": 0,
+            "fetched_at": int(time.time()),
             "engine": "checklane-audit/" + VERSION,
         }
 
@@ -878,6 +903,7 @@ def audit(domain):
     org_nodes = [n for n in ld_nodes
                  if "organization" in node_types(n) or "localbusiness" in node_types(n)]
     product_source = "homepage"
+    p2 = None  # sampled product-page parser, when one is fetched below
     if not product_nodes and sitemap_info["first_product_url"]:
         # Fairness: Product markup usually lives on product pages, not the home
         # page. Sample one before scoring.
@@ -1041,6 +1067,107 @@ def audit(domain):
                             "Add your business name, web address, and logo in labeled "
                             "format. It's the easiest way for AI to verify you're "
                             "legit.", "low"))
+    # ---- Product images labeled (Board-approved expansion) -------------- #
+    # AI shopping surfaces are visual: imageless products don't get shown.
+    if product_nodes:
+        _img_ok = sum(1 for n in product_nodes if n.get("image"))
+        if _img_ok == len(product_nodes):
+            s += 2
+            checks.append(check("product-image-labels", "Product images labeled",
+                                "pass", "Every labeled product (%d) carries an "
+                                "image URL. AI can show your products visually."
+                                % len(product_nodes), None))
+        elif _img_ok:
+            s += 1
+            checks.append(check("product-image-labels", "Some product images missing",
+                                "partial", "%d of %d labeled products have an "
+                                "image URL." % (_img_ok, len(product_nodes)),
+                                "Add an image URL to every product's labels. "
+                                "AI shopping surfaces are visual; products "
+                                "without images don't get shown.", "medium"))
+        else:
+            checks.append(check("product-image-labels", "No product images labeled",
+                                "fail", "None of your labeled products carry an "
+                                "image URL.",
+                                "Add an image URL to every product's labels. "
+                                "AI shopping surfaces are visual; products "
+                                "without images don't get shown.", "medium"))
+    # ---- Prices in visible text ----------------------------------------- #
+    # Redundancy for simpler AI readers that don't parse structured data.
+    _price_re = re.compile(r"(?:\$\s?\d[\d,]*(?:\.\d{2})?|USD\s?\d[\d,]*)")
+    if _price_re.search(parser.visible_text):
+        s += 2
+        checks.append(check("price-in-visible-text", "Prices in readable text",
+                            "pass", "Found prices in your page's visible text, "
+                            "not just in labels. Simpler AI readers that skip "
+                            "structured data can still read them.", None))
+    else:
+        checks.append(check("price-in-visible-text", "Prices only in labels",
+                            "partial", "No prices found in your visible text. "
+                            "Prices may exist only in structured data.",
+                            "Show prices in your page's visible text too, not "
+                            "only in labels. Simpler AI readers don't parse "
+                            "structured data; visible prices are the fallback "
+                            "they can all read.", "low"))
+    # ---- JSON-LD blocks parse cleanly ----------------------------------- #
+    # One malformed block can silently kill all product labels.
+    _raw_ld = len(parser.ld_json_raw)
+    if _raw_ld:
+        if len(ld_nodes) >= _raw_ld:
+            s += 2
+            checks.append(check("jsonld-valid", "Label blocks parse cleanly",
+                                "pass", "All %d label block(s) parsed without "
+                                "errors." % _raw_ld, None))
+        else:
+            checks.append(check("jsonld-valid", "Some label blocks broken",
+                                "partial", "%d of %d label block(s) failed to "
+                                "parse and were ignored."
+                                % (_raw_ld - len(ld_nodes), _raw_ld),
+                                "Validate your JSON-LD (e.g. Google's Rich "
+                                "Results Test) and fix the broken block(s). "
+                                "One malformed block can silently kill every "
+                                "product label on the page.", "medium"))
+    # ---- Open Graph product tags ---------------------------------------- #
+    # og:price:amount/currency/availability drive rich product cards when AI
+    # assistants cite or share products. Homepage rarely carries them, so a
+    # miss is informational, never a fail. Product pages should have them.
+    _ogp = dict(parser.meta)
+    if p2 is not None:
+        _ogp.update(p2.meta)
+    _ogp_ok = [k for k in ("og:price:amount", "og:price:currency",
+                           "og:availability") if _ogp.get(k, "").strip()]
+    if _ogp_ok:
+        s += 2
+        checks.append(check("og-product-tags", "Product share tags present",
+                            "pass", "Found product share tags (%s). AI "
+                            "assistants can build rich product cards when "
+                            "citing your products."
+                            % ", ".join(_ogp_ok), None))
+    else:
+        checks.append(check("og-product-tags", "No product share tags",
+                            "partial", "No og:price:amount, og:price:currency, "
+                            "or og:availability tags found (checked your "
+                            "homepage%s)."
+                            % (" and a sampled product page"
+                               if p2 is not None else ""),
+                            "Add og:price:amount, og:price:currency, and "
+                            "og:availability tags to your product pages. "
+                            "They drive the rich product cards AI assistants "
+                            "show when citing or sharing products.", "low"))
+    # ---- Breadcrumb labels ---------------------------------------------- #
+    if any("breadcrumblist" in node_types(n) for n in ld_nodes):
+        s += 2
+        checks.append(check("breadcrumb-labels", "Catalog path labels",
+                            "pass", "Found BreadcrumbList labels. AI can see "
+                            "where each product sits in your catalog and cite "
+                            "the category path.", None))
+    else:
+        checks.append(check("breadcrumb-labels", "No catalog path labels",
+                            "partial", "No BreadcrumbList labels found.",
+                            "Add BreadcrumbList structured data to product "
+                            "pages (Home > Category > Product). It tells AI "
+                            "where a product sits in your catalog, a path it "
+                            "can cite in answers.", "low"))
     scores[cat] = (min(s, cmax), cmax)
 
     # ---- Category 1 (continued): ACP feed-eligibility signals (8) ------- #
@@ -1225,6 +1352,78 @@ def audit(domain):
                             "and how to reach you. (A repo-root AGENTS.md is a "
                             "different thing: a coding-agent convention for "
                             "software projects, not websites.)", "medium"))
+    # ---- Sitemap freshness (Board-approved expansion) ------------------ #
+    # Stale sitemaps waste crawl budget and mislead AI indexers. Evergreen
+    # content legitimately carries old dates, so this never fails.
+    _lastmods = sitemap_info.get("lastmods") or []
+    if sitemap_info["ok"] and _lastmods:
+        _lm_dates = []
+        for _lm in _lastmods:
+            try:
+                _lm_dates.append(datetime.datetime.fromisoformat(
+                    _lm.replace("Z", "+00:00").split("T")[0]))
+            except Exception:
+                continue
+        if _lm_dates:
+            _newest = max(_lm_dates)
+            _age_days = (datetime.datetime.now() - _newest).days
+            if _age_days <= 180:
+                s += 2
+                checks.append(check("sitemap-freshness", "Sitemap is fresh",
+                                    "pass", "Your sitemap's newest entry is "
+                                    "%d day(s) old. AI indexers see a current "
+                                    "catalog." % _age_days, None))
+            else:
+                checks.append(check("sitemap-freshness", "Sitemap looks stale",
+                                    "partial", "Your sitemap's newest entry is "
+                                    "%d day(s) old." % _age_days,
+                                    "Refresh your sitemap's <lastmod> dates "
+                                    "when products or pages change. Stale "
+                                    "sitemaps waste crawl budget and mislead "
+                                    "AI indexers about what's current.",
+                                    "low"))
+        else:
+            checks.append(check("sitemap-freshness", "Sitemap has no dates",
+                                "partial", "Your sitemap lists pages but no "
+                                "<lastmod> dates, so freshness can't be judged.",
+                                "Add <lastmod> dates to your sitemap entries. "
+                                "They tell crawlers and AI indexers what's "
+                                "new versus evergreen.", "low"))
+    elif sitemap_info["ok"]:
+        checks.append(check("sitemap-freshness", "Sitemap has no dates",
+                            "partial", "Your sitemap lists pages but no "
+                            "<lastmod> dates, so freshness can't be judged.",
+                            "Add <lastmod> dates to your sitemap entries. "
+                            "They tell crawlers and AI indexers what's "
+                            "new versus evergreen.", "low"))
+    # ---- Site search (Board-approved expansion) ------------------------- #
+    # Agents that can't browse a full catalog need query access. Shopify uses
+    # /search?q=, WooCommerce uses /?s=; probe both conventions.
+    _search_ok = None
+    for _spath, _slabel in (("/search?q=test", "/search?q="),
+                            ("/?s=test", "/?s=")):
+        _sr = fetch(base + _spath, ua=NORMAL_UA)
+        polite()
+        if _sr["status"] == 200 and len(_sr["body"]) > 1000:
+            _slow = _sr["body"].lower()
+            if ("test" in _slow and
+                    any(k in _slow for k in ("result", "product", "search"))):
+                _search_ok = _slabel
+                break
+    if _search_ok:
+        s += 2
+        checks.append(check("site-search", "Site search works",
+                            "pass", "Your %s endpoint returns results. Agents "
+                            "that can't browse your full catalog can query "
+                            "it instead." % _search_ok, None))
+    else:
+        checks.append(check("site-search", "No working site search found",
+                            "partial", "Probed /search?q= and /?s=; neither "
+                            "returned a working results page.",
+                            "Add on-site search (or fix it if it's broken). "
+                            "Agents that can't page through your whole "
+                            "catalog need a way to query it; shoppers use it "
+                            "too.", "medium"))
     scores[cat] = (min(s, cmax), cmax)
 
     # ============ Category 4: AI bot access (20) ========================= #
@@ -1374,6 +1573,65 @@ def audit(domain):
                             "agents were never blocked by crawler rules in the "
                             "first place. They buy through normal checkout."
                             % len(AGENT_UAS), None))
+    # ---- Fetch latency (Board-approved expansion) ----------------------- #
+    # Median response time across the 28 agent fetches above. Informational
+    # only, never scored, never a fail: latency measured from our test
+    # servers varies by geography and transient network, so a merchant must
+    # never be dinged for our measurement path. Generous 3s threshold.
+    _lat = sorted(r.get("elapsed", 0) for r in agent_results.values()
+                  if r["status"] and r["status"] < 400)
+    if _lat:
+        _med = _lat[len(_lat) // 2]
+        if _med < 3:
+            checks.append(check("fetch-latency", "Page loads fast for AI visitors",
+                                "pass", "Median response %.1fs across %d AI "
+                                "visitor fetches. Slow pages get truncated or "
+                                "deprioritized by AI fetchers."
+                                % (_med, len(_lat)), None))
+        else:
+            checks.append(check("fetch-latency", "Slow responses for AI visitors",
+                                "partial", "Median response %.1fs across %d AI "
+                                "visitor fetches. (Measured from our test "
+                                "servers; your visitors may see different "
+                                "speeds.)" % (_med, len(_lat)),
+                                "Speed up server response time (caching, CDN, "
+                                "lighter pages). AI fetchers truncate or "
+                                "deprioritize slow pages, so slow responses "
+                                "mean less of your catalog gets read.", "low"))
+    # ---- Content parity (Board-approved expansion) --------------------- #
+    # Word count served to agent UAs vs the normal-UA baseline. Detects soft
+    # cloaking / degraded bot content beyond the title check. Informational
+    # only, never scored, never a fail: paywalled, consent-gated, or A/B
+    # tested sites can legitimately differ.
+    _base_words = len(re.findall(r"\w+", home["body"]))
+    _parity_ok = 0
+    _parity_n = 0
+    for _lr in agent_results.values():
+        if _lr["status"] and _lr["status"] < 400 and _lr["body"]:
+            _parity_n += 1
+            _w = len(re.findall(r"\w+", _lr["body"]))
+            if _base_words and abs(_w - _base_words) <= 0.2 * _base_words:
+                _parity_ok += 1
+    if _parity_n and _base_words:
+        if _parity_ok == _parity_n:
+            checks.append(check("content-parity", "AI visitors see the same content",
+                                "pass", "All %d readable AI visitor fetches "
+                                "received content within 20%% of what a normal "
+                                "visit gets. No soft cloaking detected."
+                                % _parity_n, None))
+        else:
+            checks.append(check("content-parity", "AI visitors may see less content",
+                                "partial", "%d of %d readable AI visitor "
+                                "fetches received substantially different "
+                                "content than a normal visit."
+                                % (_parity_n - _parity_ok, _parity_n),
+                                "Check what automated visitors see: fetch a "
+                                "page with a bot user-agent (or use 'view "
+                                "source') and compare. If bots get a stripped "
+                                "page while humans get the full one, AI "
+                                "answers will be built from the thin version. "
+                                "(Paywalls, consent gates, and A/B tests can "
+                                "cause legitimate differences.)", "medium"))
     scores[cat] = (s, cmax)
 
     # ============ Category 5: Machine-readability basics (20) ============= #
@@ -1493,6 +1751,57 @@ def audit(domain):
         checks.append(check("product-links", "Product links found",
                             "pass", "%d product links found. AI can browse your "
                             "catalog." % prod_links, None))
+    # ---- Alt-text coverage (Board-approved expansion) ------------------- #
+    # Alt text is how AI "sees" images. Decorative images legitimately lack
+    # alt text, so this is threshold-based (70%), never a fail.
+    if parser.imgs:
+        _alt_ok = sum(1 for a in parser.imgs if (a or "").strip())
+        _cov = _alt_ok / len(parser.imgs)
+        if _cov >= 0.7:
+            s += 2
+            checks.append(check("alt-text-coverage", "Images described for AI",
+                                "pass", "%d%% of your %d images have alt text "
+                                "(%d/%d). AI can 'see' what your images show."
+                                % (round(100 * _cov), len(parser.imgs),
+                                   _alt_ok, len(parser.imgs)), None))
+        else:
+            checks.append(check("alt-text-coverage", "Many images undescribed",
+                                "partial", "Only %d%% of your %d images have "
+                                "alt text (%d/%d)."
+                                % (round(100 * _cov), len(parser.imgs),
+                                   _alt_ok, len(parser.imgs)),
+                                "Add descriptive alt text to product and "
+                                "content images. Alt text is how AI 'sees' "
+                                "images, and it's also the accessibility "
+                                "standard. (Purely decorative images can stay "
+                                "empty.)", "low"))
+    # ---- robots.txt Sitemap directive ----------------------------------- #
+    if "sitemap:" in robots_body.lower():
+        s += 2
+        checks.append(check("robots-sitemap-directive", "Sitemap announced",
+                            "pass", "Your robots.txt points crawlers at your "
+                            "sitemap. It's the discovery hint AI crawlers "
+                            "actually read.", None))
+    else:
+        checks.append(check("robots-sitemap-directive", "Sitemap not announced",
+                            "partial", "Your robots.txt has no Sitemap: line.",
+                            "Add a 'Sitemap: https://%s/sitemap.xml' line to "
+                            "your robots.txt. It's the discovery hint "
+                            "crawlers read first." % domain, "low"))
+    # ---- html lang declared --------------------------------------------- #
+    if parser.html_lang:
+        s += 2
+        checks.append(check("html-lang", "Content language declared",
+                            "pass", "Your pages declare language '%s'. AI "
+                            "knows what language to read and quote."
+                            % parser.html_lang, None))
+    else:
+        checks.append(check("html-lang", "Content language not declared",
+                            "partial", "Your <html> tag has no lang attribute.",
+                            "Add lang=\"en\" (or your language) to your <html> "
+                            "tag. AI needs to know the content language "
+                            "before quoting or translating it. One-line fix.",
+                            "low"))
     scores[cat] = (min(s, cmax), cmax)
 
     # ============ Category 6: AI discovery, non-storefronts (20) ======== #
@@ -1605,6 +1914,45 @@ def audit(domain):
                             "structured data. FAQ answers are among the "
                             "easiest content for AI to quote directly.",
                             "low"))
+    # ---- Contact labels (Board-approved expansion) ---------------------- #
+    # For a business that doesn't sell online, contact info is the conversion
+    # event. AI needs it machine-readable.
+    _has_contact = bool(
+        re.search(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}",
+                  parser.visible_text)
+        or re.search(r"\+?1?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}",
+                     parser.visible_text)
+        or any("contactpoint" in node_types(n) for n in ld_nodes))
+    if _has_contact:
+        s += 2
+        checks.append(check("contact-labels", "Contact info readable",
+                            "pass", "Found a phone number, email, or labeled "
+                            "contact info. AI can connect a shopper to you.",
+                            None))
+    else:
+        checks.append(check("contact-labels", "No contact info found",
+                            "partial", "No phone, email, or labeled contact "
+                            "info found on your homepage.",
+                            "Put your phone number and email where AI can "
+                            "read them (visible text or ContactPoint labels). "
+                            "For a business that doesn't sell online, contact "
+                            "info is the conversion event.", "medium"))
+    # ---- Opening-hours labels ------------------------------------------- #
+    _has_hours = any(n.get("openingHoursSpecification") for n in ld_nodes
+                     if isinstance(n, dict))
+    if _has_hours:
+        s += 2
+        checks.append(check("hours-labels", "Opening hours labeled",
+                            "pass", "Found openingHoursSpecification labels. "
+                            "AI can answer 'is it open now' directly.",
+                            None))
+    else:
+        checks.append(check("hours-labels", "Opening hours not labeled",
+                            "partial", "No opening-hours labels found.",
+                            "If you have opening hours, add "
+                            "openingHoursSpecification labels. 'Is it open "
+                            "now' is one of the most common AI-assistant "
+                            "queries for local businesses.", "low"))
     scores[cat] = (min(s, cmax), cmax)
 
     # ---------------- assemble report ------------------------------------ #
@@ -1628,6 +1976,11 @@ def audit(domain):
     for _c in categories:
         if _c.get("na"):
             na_ids.update(x["id"] for x in _c["checks"])
+    # check_count: the number of checks actually rendered in this report
+    # (every category's check list, N/A categories included — they render
+    # their checks as informational). Computed from the assembled
+    # categories, so it can never disagree with what the buyer counts.
+    check_count = sum(len(_c["checks"]) for _c in categories)
     total = sum(c["score"] for c in categories)
     total_max = sum(c["max"] for c in categories)
     score = round(100 * total / total_max) if total_max else 0
@@ -1646,6 +1999,7 @@ def audit(domain):
         "summary": _summary(score, grade),
         "site_type": site_type,
         "site_type_signals": sf_signals,
+        "check_count": check_count,
         "categories": categories,
         "fixes": [{"id": f["id"], "check": f["name"], "severity": f["severity"],
                    "detail": f["detail"], "fix": f["fix"]} for f in fixes],
@@ -1664,14 +2018,23 @@ def _cat_check_ids(cat_name):
         "Product info AI can read": {"jsonld-present", "product-markup",
                                     "product-completeness", "offers-present",
                                     "merchant-listing-details", "review-signals",
-                                    "org-markup"},
-        "Can AI find your products": {"sitemap", "product-feed", "agents-md"},
-        "AI bot access": {"bot-test-scope", "agent-ua", "agent-access-summary"},
+                                    "org-markup",
+                                    "product-image-labels", "price-in-visible-text",
+                                    "jsonld-valid", "og-product-tags",
+                                    "breadcrumb-labels"},
+        "Can AI find your products": {"sitemap", "product-feed", "agents-md",
+                                      "sitemap-freshness", "site-search"},
+        "AI bot access": {"bot-test-scope", "agent-ua", "agent-access-summary",
+                          "content-parity", "fetch-latency"},
         "Can AI read your pages": {"robots-ai", "static-content",
                                        "html-basics", "faq-schema",
-                                       "product-links"},
+                                       "product-links",
+                                       "alt-text-coverage",
+                                       "robots-sitemap-directive",
+                                       "html-lang"},
         "Can AI find your business": {"biz-llms", "biz-sitemap", "biz-og",
-                                      "biz-faq"},
+                                      "biz-faq",
+                                      "contact-labels", "hours-labels"},
     }.get(cat_name, set())
 
 
