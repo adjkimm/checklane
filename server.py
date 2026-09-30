@@ -936,6 +936,7 @@ class Handler(BaseHTTPRequestHandler):
                 "summary": report.get("summary"),
                 "engine": report.get("engine"),
                 "duration_s": report.get("duration_s"),
+                "check_count": report.get("check_count", 0),
                 "report_token": token,
             })
         if path == "/api/config":
