@@ -1,5 +1,7 @@
 # Checklane
 
+**Live at [getchecklane.com](https://getchecklane.com)** — free AI-shopper-readiness audit for small businesses.
+
 Free agent-readiness audit for SMBs — "SEO for AI shopping agents."
 
 ## Run
