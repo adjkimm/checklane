@@ -873,6 +873,10 @@ class Handler(BaseHTTPRequestHandler):
                     "/guides/shopify-ai-readiness/"):
             # Guide #8 (added 2026-09-28).
             return self._serve_file("guides/shopify-ai-readiness.html")
+        if path in ("/guides/can-ai-agents-access-my-website",
+                    "/guides/can-ai-agents-access-my-website/"):
+            # Guide #9 (added 2026-09-30).
+            return self._serve_file("guides/can-ai-agents-access-my-website.html")
         if path == "/lost-report":
             # "Lost your report?" re-delivery page (M8): an email form that
             # POSTs to /api/resend-report. The response never reveals
