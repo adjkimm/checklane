@@ -81,4 +81,34 @@
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
+  <url>
+    <loc>https://getchecklane.com/guides/why-isnt-my-business-showing-up-in-chatgpt</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://getchecklane.com/guides/what-is-geo</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://getchecklane.com/guides/get-products-into-perplexity-shopping</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://getchecklane.com/guides/do-ai-shopping-agents-actually-buy</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://getchecklane.com/guides/what-does-ai-say-about-my-business</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://getchecklane.com/guides/what-does-an-ai-ready-product-page-look-like</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
 </urlset>
