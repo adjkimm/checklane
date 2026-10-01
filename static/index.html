@@ -360,5 +360,29 @@
 </footer>
 
 <script src="/static/app.js"></script>
+<script>
+(function(){
+  function reveal(sel, stagger){
+    var els = document.querySelectorAll(sel);
+    if(!els.length) return;
+    els.forEach(function(el, i){
+      el.classList.add('reveal');
+      if(stagger) el.style.transitionDelay = (i * stagger) + 'ms';
+    });
+    function show(el){ el.classList.add('in'); }
+    if(!('IntersectionObserver' in window)){ els.forEach(show); return; }
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){ show(e.target); io.unobserve(e.target); }
+      });
+    }, {threshold: 0.12});
+    els.forEach(function(el){ io.observe(el); });
+  }
+  reveal('#how .step', 90);
+  reveal('#checks .check', 80);
+  reveal('#teaser .report-card', 0);
+  reveal('#faq .faq', 0);
+})();
+</script>
 </body>
 </html>
