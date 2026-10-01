@@ -116,5 +116,18 @@
 
 <!-- shared site footer goes here -->
 
+<script>
+(function(){
+  var els=document.querySelectorAll('main h2,main .pull');
+  if(!els.length)return;
+  els.forEach(function(el){el.classList.add('reveal');});
+  function show(el){el.classList.add('in');}
+  if(!('IntersectionObserver' in window)){els.forEach(show);return;}
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){if(e.isIntersecting){show(e.target);io.unobserve(e.target);}});
+  },{threshold:0.15});
+  els.forEach(function(el){io.observe(el);});
+})();
+</script>
 </body>
 </html>
