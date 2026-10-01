@@ -877,6 +877,30 @@ class Handler(BaseHTTPRequestHandler):
                     "/guides/can-ai-agents-access-my-website/"):
             # Guide #9 (added 2026-09-30).
             return self._serve_file("guides/can-ai-agents-access-my-website.html")
+        if path in ("/guides/why-isnt-my-business-showing-up-in-chatgpt",
+                    "/guides/why-isnt-my-business-showing-up-in-chatgpt/"):
+            # Guide #10 (added 2026-09-30).
+            return self._serve_file("guides/why-isnt-my-business-showing-up-in-chatgpt.html")
+        if path in ("/guides/what-is-geo",
+                    "/guides/what-is-geo/"):
+            # Guide #11 (added 2026-09-30).
+            return self._serve_file("guides/what-is-geo.html")
+        if path in ("/guides/get-products-into-perplexity-shopping",
+                    "/guides/get-products-into-perplexity-shopping/"):
+            # Guide #12 (added 2026-09-30).
+            return self._serve_file("guides/get-products-into-perplexity-shopping.html")
+        if path in ("/guides/do-ai-shopping-agents-actually-buy",
+                    "/guides/do-ai-shopping-agents-actually-buy/"):
+            # Guide #13 (added 2026-09-30).
+            return self._serve_file("guides/do-ai-shopping-agents-actually-buy.html")
+        if path in ("/guides/what-does-ai-say-about-my-business",
+                    "/guides/what-does-ai-say-about-my-business/"):
+            # Guide #14 (added 2026-09-30).
+            return self._serve_file("guides/what-does-ai-say-about-my-business.html")
+        if path in ("/guides/what-does-an-ai-ready-product-page-look-like",
+                    "/guides/what-does-an-ai-ready-product-page-look-like/"):
+            # Guide #15 (added 2026-09-30).
+            return self._serve_file("guides/what-does-an-ai-ready-product-page-look-like.html")
         if path == "/lost-report":
             # "Lost your report?" re-delivery page (M8): an email form that
             # POSTs to /api/resend-report. The response never reveals
