@@ -42,46 +42,6 @@
  "description": "Checklane grades websites 0-100 on AI-shopper readiness: whether AI shopping agents can find, read, and buy from a site."
 }
 </script>
-<script type="application/ld+json">
-{
- "@context": "https://schema.org",
- "@type": "FAQPage",
- "mainEntity": [
-  {
-   "@type": "Question",
-   "name": "What does my score tell me?",
-   "acceptedAnswer": {
-    "@type": "Answer",
-    "text": "Whether AI shoppers can technically find, read, and buy from your site. It answers the urgent question first: can AI shoppers buy from you at all? Many sites struggle on basic technical grounds before products or prices ever matter."
-   }
-  },
-  {
-   "@type": "Question",
-   "name": "Do you need my password or admin access?",
-   "acceptedAnswer": {
-    "@type": "Answer",
-    "text": "Nope. We only read your public pages, the same ones any visitor sees. Nothing to install, no login."
-   }
-  },
-  {
-   "@type": "Question",
-   "name": "My site isn\u2019t a store. Is this for me?",
-   "acceptedAnswer": {
-    "@type": "Answer",
-    "text": "Yes. Checklane grades any public website. Storefront-specific checks like product data are marked not applicable for non-storefronts; you\u2019re scored on what matters for your site: AI bot access, readability, llms.txt, sitemap, meta tags, and FAQ content."
-   }
-  },
-  {
-   "@type": "Question",
-   "name": "How do I get my full fix list?",
-   "acceptedAnswer": {
-    "@type": "Answer",
-    "text": "Run the free audit, then get the full report for $9."
-   }
-  }
- ]
-}
-</script>
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="apple-touch-icon" href="/static/favicon.svg">
 
@@ -127,7 +87,6 @@
     <a class="brand" href="#top"><span class="brand-mark">▦</span> Checklane</a>
     <nav class="nav-links">
       <a href="#report">What&rsquo;s inside</a>
-      <a href="#faq">FAQ</a>
     </nav>
     <a class="btn btn-small" href="#audit">Free audit</a>
   </div>
@@ -240,41 +199,6 @@
 
 
 
-  <!-- ============ FAQ ============ -->
-  <section class="section section-alt" id="faq">
-    <div class="wrap">
-      <h2>Common questions</h2>
-      <div class="faq">
-        <details>
-          <summary>What does my score tell me?</summary>
-          <p>Whether AI shoppers can technically find, read, and buy from your
-            site. It answers the urgent question first: can AI shoppers buy from
-            you <em>at all</em>? Many sites struggle on basic technical grounds
-            before products or prices ever matter.</p>
-        </details>
-        <details>
-          <summary>Do you need my password or admin access?</summary>
-          <p>Nope. We only read your public pages, the same ones any visitor
-            sees. Nothing to install, no login.</p>
-        </details>
-        
-        <details>
-          <summary>My site isn&rsquo;t a store. Is this for me?</summary>
-          <p>Yes. Checklane grades any public website. Storefront-specific checks
-            like product data are marked not applicable for non-storefronts;
-            you&rsquo;re scored on what matters for your site: AI bot access,
-            readability, llms.txt, sitemap, meta tags, and FAQ content.</p>
-        </details>
-        
-        
-        <details>
-          <summary>How do I get my full fix list?</summary>
-          <p>Run the free audit, then get the full report for $9.</p>
-        </details>
-        
-      </div>
-    </div>
-  </section>
 
 
 </main>
@@ -310,7 +234,6 @@
     els.forEach(function(el){ io.observe(el); });
   }
   reveal('#report .report-preview', 0);
-  reveal('#faq .faq', 0);
 })();
 </script>
 </body>
