@@ -65,14 +65,6 @@
   },
   {
    "@type": "Question",
-   "name": "Do I have to lower my defenses to let AI shoppers in?",
-   "acceptedAnswer": {
-    "@type": "Answer",
-    "text": "No. The AI crawlers that read your site publish their addresses, so you can welcome each one by name while your firewall keeps blocking everything else. For purchases, checkout protocols like UCP and ACP let an AI shopper buy through a structured, authenticated connection, and your checkout keeps the fraud protections you already have."
-   }
-  },
-  {
-   "@type": "Question",
    "name": "My site isn\u2019t a store. Is this for me?",
    "acceptedAnswer": {
     "@type": "Answer",
@@ -81,34 +73,10 @@
   },
   {
    "@type": "Question",
-   "name": "Will ChatGPT, Claude, Google, or Perplexity start recommending my products?",
-   "acceptedAnswer": {
-    "@type": "Answer",
-    "text": "Recommendations are the AI\u2019s call, but here\u2019s what matters more: AI can only recommend stores it can read. Many stores are unreliably legible to AI shoppers right now. Browser-based agents can still buy through normal checkout, but structure is what makes it reliable. Being findable isn\u2019t luck, it\u2019s engineering: the right structure and codes so AI systems like ChatGPT shopping, Google AI Mode, and Perplexity can discover, read, and buy from your store. You can\u2019t buy a recommendation, but you can remove every technical reason AI skips you."
-   }
-  },
-  {
-   "@type": "Question",
-   "name": "Can\u2019t I just ask ChatGPT or Claude to check this?",
-   "acceptedAnswer": {
-    "@type": "Answer",
-    "text": "You can, but a chatbot only shows you one AI\u2019s view. The visitor that can cost you sales is the one that gets blocked. It never gets far enough to tell you. Checklane visits as 28 AI crawlers and fetchers, runs the same checks every time, and gives you a score you can re-run after each fix. It\u2019s the audit you\u2019d hand the chatbot, already written."
-   }
-  },
-  {
-   "@type": "Question",
    "name": "How do I get my full fix list?",
    "acceptedAnswer": {
     "@type": "Answer",
-    "text": "Run the free audit, then get the full report for $9: every check explained, every fix ranked by what matters most for your site."
-   }
-  },
-  {
-   "@type": "Question",
-   "name": "Who is Checklane?",
-   "acceptedAnswer": {
-    "@type": "Answer",
-    "text": "Checklane exists for a simple reason: small businesses shouldn\u2019t get left behind as shopping goes AI. This free audit is where we start, making sure you can compete."
+    "text": "Run the free audit, then get the full report for $9."
    }
   }
  ]
@@ -118,12 +86,14 @@
 <link rel="apple-touch-icon" href="/static/favicon.svg">
 
     <style>
+    .nav { background: #fff; }
     .stakes { font-weight: 600; margin-top: 0.75rem; }
     .split { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem; }
     @media (max-width: 700px) { .split { grid-template-columns: 1fr; } }
     .split-label { font-weight: 600; margin-bottom: 0.5rem; }
     .storefront-mock { border: 1px solid #e5e2da; border-radius: 12px; padding: 1.25rem; background: #fff; max-width: 320px; }
     .sf-img { height: 140px; background: #f1efe9; border-radius: 8px; margin-bottom: 0.75rem; }
+    .sf-img svg { display: block; width: 100%; height: 100%; }
     .sf-name { font-weight: 600; margin: 0 0 0.25rem; }
     .sf-price { margin: 0 0 0.75rem; color: #444; }
     .sf-btn { display: inline-block; background: #1a1a1a; color: #fff; border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.9rem; }
@@ -145,6 +115,7 @@
     .rf-label { font-size: 0.8rem; color: #777; text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 0.5rem; }
     .rf-cat { font-size: 0.9rem; color: #555; margin: 0 0 0.25rem; }
     .rf-title { font-size: 1.15rem; font-weight: 700; margin: 0 0 0.75rem; }
+    .rf-redacted { background: #1a1a1a; color: #e8e6e1; border-radius: 8px; padding: 0.9rem 1rem; font-size: 0.9rem; margin: 0.75rem 0 0; }
     .cta-row { margin-top: 1.5rem; }
     </style>
 
@@ -155,9 +126,7 @@
   <div class="wrap nav-inner">
     <a class="brand" href="#top"><span class="brand-mark">▦</span> Checklane</a>
     <nav class="nav-links">
-      <a href="#how">How it works</a>
       <a href="#report">What&rsquo;s inside</a>
-      <a href="#checks">What we check</a>
       <a href="#faq">FAQ</a>
     </nav>
     <a class="btn btn-small" href="#audit">Free audit</a>
@@ -191,12 +160,13 @@
     <section class="section" id="two-visitors">
       <div class="wrap">
         <h2>Two visitors. Two different websites.</h2>
-        <p class="lede">Your customer sees your design. An AI shopper sees your code. If the code does not describe your products, you are invisible to the next buyer.</p>
+        <p class="lede">Your customer sees your design. An AI shopper sees your code.</p>
+        <p class="lede">We test against 28 AI crawlers and agent fetchers.</p>
         <div class="split">
           <div class="split-panel">
             <p class="split-label">Your customer sees</p>
             <div class="storefront-mock">
-              <div class="sf-img"></div>
+              <div class="sf-img"><svg viewBox="0 0 200 120" role="img" aria-label="Illustration of a shopping bag"><rect x="72" y="42" width="56" height="52" rx="5" fill="none" stroke="#1a1a1a" stroke-width="3"/><path d="M86 42 C86 26 114 26 114 42" fill="none" stroke="#1a1a1a" stroke-width="3"/><line x1="72" y1="58" x2="128" y2="58" stroke="#1a1a1a" stroke-width="2" opacity="0.25"/></svg></div>
               <p class="sf-name">Trail Running Shoes</p>
               <p class="sf-price">$129.00</p>
               <span class="sf-btn">Add to cart</span>
@@ -233,36 +203,6 @@
     <p class="sr-only">The AI crawlers Checklane identifies come from OpenAI, Anthropic, Google, Meta, Apple, Perplexity, Amazon, Mistral AI, Moonshot AI, ByteDance, DuckDuckGo, You.com, Allen Institute for AI, and Common Crawl.</p>
   </div>
 
-  <!-- ============ HOW IT WORKS ============ -->
-  <section class="section" id="how">
-    <div class="wrap">
-      <h2>How it works</h2>
-      <p class="section-sub">AI shoppers don&rsquo;t browse like people do,
-        they parse code. These three steps show you exactly where your site
-        stands.</p>
-      <div class="steps">
-        <div class="step">
-          <div class="step-n">1</div>
-          <h3>Test your site</h3>
-          <p>Type in your domain. Free, no account.</p>
-        </div>
-        <div class="step">
-          <div class="step-n">2</div>
-          <h3>See your score</h3>
-          <p>A 0&ndash;100 grade in about a minute, across the five things AI
-            shoppers look for.</p>
-        </div>
-        <div class="step">
-          <div class="step-n">3</div>
-          <h3>Get the full report: $9</h3>
-          <p>Every check explained, every fix ranked by what matters most for
-            your site. Yours to keep.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-
   <!-- ============ INSIDE THE FULL REPORT ============ -->
   
     <section class="section section-alt" id="report">
@@ -287,67 +227,16 @@
             <p class="rf-label">Real finding, from an earlier $9 report on getchecklane.com</p>
             <p class="rf-cat">Category: The AI checkout handshake</p>
             <p class="rf-title">No UCP checkout file found</p>
-            <p><strong>What it means:</strong> We checked the standard discovery paths (starting with the canonical /.well-known/ucp). Nothing there. This is the faster machine path for UCP-capable agents, not a prerequisite. Browser-driving agents buy through normal checkout today.</p>
-            <p><strong>How to fix it:</strong> Publish your UCP capability profile at /.well-known/ucp. The file itself is hours; a real UCP implementation (working REST endpoints, payment handlers with signing keys, order webhooks) is days to weeks of backend engineering. A static JSON pointing at dead endpoints is worse than none.</p>
+            <p><strong>What it means:</strong> No checkout file at the standard
+              discovery paths, so UCP-capable agents take the slower browser path.</p>
+            <div class="rf-redacted">The exact fix steps are in the full $9 report.</div>
           </div>
         </div>
         <p class="cta-row"><a class="btn" href="#audit">Get the full report: $9</a></p>
-        <p class="fig-cap">The fix steps come with the full report. This is a roadmap, not a promise.</p>
+        <p class="fig-cap">This is a roadmap, not a promise.</p>
       </div>
     </section>
 
-
-  <!-- ============ WHAT WE CHECK ============ -->
-  <section class="section" id="checks">
-    <div class="wrap">
-      <h2>What we look at</h2>
-      <p class="section-sub">Your human shopper sees one assistant. Your site
-        sees 28 agents: the major AI crawlers and agent fetchers, each
-        reading your site its own way. Every check across five categories tests
-        whether every one of them can find, read, and buy from you.</p>
-      <div class="checks">
-        <div class="check">
-          <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-          <h3>The AI checkout handshake</h3>
-          <p>The behind-the-scenes file that tells AI shoppers &ldquo;yes, you can buy
-            here&rdquo;: Google&rsquo;s Universal Commerce Protocol profile
-            (<code>/.well-known/ucp</code>) and Agentic Commerce Protocol (ACP)
-            checkout signals. It&rsquo;s the faster, more reliable machine path for
-            agent checkout.</p>
-        </div>
-        <div class="check">
-          <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-          <h3>Product info AI can read</h3>
-          <p>Clean, labeled details using schema.org Product markup: names,
-            photos, prices, stock. AI reads labels first; unlabeled pages may
-            as well be invisible.</p>
-        </div>
-        <div class="check">
-          <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <h3>Can AI find your products?</h3>
-          <p>Your sitemap and product feeds. If AI can&rsquo;t list your catalog,
-            it can&rsquo;t sell a thing.</p>
-        </div>
-        <div class="check">
-          <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          <h3>Are you blocking AI visitors?</h3>
-          <p>We visit your site as 28 AI crawlers and fetchers (GPTBot,
-            ClaudeBot, PerplexityBot, Meta&rsquo;s crawlers, Applebot,
-            Amazonbot, and more) and
-            read your robots.txt bot rules. If your security turns them away,
-            you may be invisible to the AI systems that shop for people, though
-            blocking a training crawler doesn&rsquo;t block AI shopping itself.</p>
-        </div>
-        <div class="check">
-          <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-          <h3>Can AI read your pages?</h3>
-          <p>The basics: real text (not just JavaScript), readable pages, an
-            llms.txt file, Open Graph share tags, and no accidental
-            &ldquo;keep out&rdquo; signs.</p>
-        </div>
-      </div>
-    </div>
-  </section>
 
 
 
@@ -368,15 +257,7 @@
           <p>Nope. We only read your public pages, the same ones any visitor
             sees. Nothing to install, no login.</p>
         </details>
-        <details>
-          <summary>Do I have to lower my defenses to let AI shoppers in?</summary>
-          <p>No. The AI crawlers that read your site publish their addresses,
-            so you can welcome each one by name while your firewall keeps
-            blocking everything else. For purchases, checkout protocols like
-            UCP and ACP let an AI shopper buy through a structured,
-            authenticated connection, and your checkout keeps the fraud
-            protections you already have.</p>
-        </details>
+        
         <details>
           <summary>My site isn&rsquo;t a store. Is this for me?</summary>
           <p>Yes. Checklane grades any public website. Storefront-specific checks
@@ -384,35 +265,13 @@
             you&rsquo;re scored on what matters for your site: AI bot access,
             readability, llms.txt, sitemap, meta tags, and FAQ content.</p>
         </details>
-        <details>
-          <summary>Will ChatGPT, Claude, Google, or Perplexity start recommending my products?</summary>
-          <p>Recommendations are the AI&rsquo;s call. But AI can only recommend
-            stores it can read, and most stores are unreliably legible to AI
-            shoppers right now. You can&rsquo;t buy a recommendation, but you
-            can remove every technical reason AI skips you.</p>
-        </details>
-        <details>
-          <summary>Can&rsquo;t I just ask ChatGPT or Claude to check this?</summary>
-          <p>You can, but a chatbot only shows you one AI&rsquo;s view.
-            The visitor that can cost you sales is the one that gets
-            blocked. It never gets far enough to tell you. Checklane
-            visits as 28 AI crawlers and fetchers, runs the same checks
-            every time, and gives you a score you can re-run after each
-            fix. It&rsquo;s the audit you&rsquo;d hand the chatbot,
-            already written.</p>
-        </details>
+        
+        
         <details>
           <summary>How do I get my full fix list?</summary>
-          <p>Run the free audit, then get the full report for $9:
-            every check explained, every fix ranked by what matters most for
-            your site.</p>
+          <p>Run the free audit, then get the full report for $9.</p>
         </details>
-        <details>
-          <summary>Who is Checklane?</summary>
-          <p>Checklane exists for a simple reason: small businesses
-            shouldn&rsquo;t get left behind as shopping goes AI. This free
-            audit is where we start, making sure you can compete.</p>
-        </details>
+        
       </div>
     </div>
   </section>
@@ -450,8 +309,6 @@
     }, {threshold: 0.12});
     els.forEach(function(el){ io.observe(el); });
   }
-  reveal('#how .step', 90);
-  reveal('#checks .check', 80);
   reveal('#report .report-preview', 0);
   reveal('#faq .faq', 0);
 })();
