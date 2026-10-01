@@ -608,6 +608,15 @@ def _discover_sitemap(base):
                 re.findall(r"<loc>\s*([^<]+?)\s*</loc>", body[:cap],
                            flags=re.IGNORECASE)]
 
+    def _is_product_url(u):
+        # Segment-aware: /products/<handle> (Shopify), /product/<slug>
+        # (WooCommerce), /shop/<item>, /store/<item>. A bare substring
+        # match on "product" false-positives on content like
+        # /guides/chatgpt-product-recommendations (2026-09-30: that one
+        # guide URL misclassified getchecklane.com's sitemap as a catalog).
+        path = re.sub(r"[?#].*$", "", u.lower())
+        return bool(re.search(r"/(products?|shop|store)(/|$)", path))
+
     def _lastmods(body, cap=300_000):
         return re.findall(r"<lastmod>\s*([^<]+?)\s*</lastmod>", body[:cap],
                           flags=re.IGNORECASE)[:2000]
@@ -630,7 +639,7 @@ def _discover_sitemap(base):
             if cs["status"] == 200:
                 urls = _locs(cs["body"])
                 info["url_count"] = len(urls)
-                prods = [u for u in urls if "/product" in u.lower()]
+                prods = [u for u in urls if _is_product_url(u)]
                 info["product_url_count"] = len(prods)
                 info["first_product_url"] = prods[0] if prods else None
                 info["lastmods"] = _lastmods(cs["body"])
@@ -639,7 +648,7 @@ def _discover_sitemap(base):
     if "<url" in head:
         urls = _locs(sm["body"])
         info["url_count"] = len(urls)
-        prods = [u for u in urls if "/product" in u.lower() or "/shop" in u.lower()]
+        prods = [u for u in urls if _is_product_url(u)]
         info["product_url_count"] = len(prods)
         info["first_product_url"] = prods[0] if prods else None
         info["lastmods"] = _lastmods(sm["body"])
@@ -669,6 +678,18 @@ STOREFRONT_ONLY_CATS = {
     "Product info AI can read",
     "Can AI find your products",
 }
+
+# Strong storefront signals prove real shopping machinery (cart, catalog,
+# feed). Weak signals — product schema or a price in markup on a single
+# digital offer — do not make a storefront on their own. (2026-09-30:
+# getchecklane.com's own $9 report markup fired two weak signals and was
+# misclassified as a storefront, then scored on cart/checkout checks it
+# cannot pass.)
+STRONG_SF_SIGNALS = frozenset({
+    "cart/checkout links",
+    "product pages in sitemap",
+    "product feed",
+})
 
 # Mirror of the above: scored only for non-storefronts. Storefront
 # discovery (product sitemaps, feeds, llms.txt) is Category 3; a
@@ -1638,7 +1659,9 @@ def audit(domain):
     # ---------------- site-type detection (H2) --------------------------- #
     sf_signals = _storefront_signals(parser, product_nodes, ld_nodes,
                                      sitemap_info, feed_found)
-    site_type = "storefront" if len(sf_signals) >= 2 else "non-storefront"
+    _strong = [s for s in sf_signals if s in STRONG_SF_SIGNALS]
+    site_type = ("storefront" if (_strong or len(sf_signals) >= 3)
+                 else "non-storefront")
 
     cat, cmax = "Can AI read your pages", 20
     s = 0
