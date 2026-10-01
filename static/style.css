@@ -227,3 +227,8 @@ section[id] { scroll-margin-top: 64px; }
   .footer { padding: 24px 0; }
   input, textarea, select { font-size: 16px; }
 }
+
+/* Scroll reveal for guide sections (class added via JS; no-JS still shows content) */
+.reveal{opacity:0;transform:translateY(14px);transition:opacity .55s ease,transform .55s ease}
+.reveal.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.reveal{opacity:1!important;transform:none!important;transition:none}}
