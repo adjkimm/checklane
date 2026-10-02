@@ -18,7 +18,7 @@
 <meta name="twitter:description" content="Free 0-100 audit of your site's AI-shopper readiness: can AI shopping agents find, read, and buy from you? The full report names every check and every fix, for $9.">
 <link rel="stylesheet" href="/static/style.css">
 <!-- Search Console note: Product offer carries image for merchant listings.
-     Shipping and return-policy structured data removed: a digital report has neither.
+     Shipping and return-policy structured data removed 2026-10-02: a digital report has neither.
      aggregateRating/review intentionally omitted: we have no customer
      reviews yet, and invented social proof is never added. -->
 <script type="application/ld+json">
@@ -114,40 +114,6 @@
  ]
 }
 </script>
-<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-<link rel="apple-touch-icon" href="/static/favicon.svg">
-
-    <style>
-    .stakes { font-weight: 600; margin-top: 0.75rem; }
-    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem; }
-    @media (max-width: 700px) { .split { grid-template-columns: 1fr; } }
-    .split-label { font-weight: 600; margin-bottom: 0.5rem; }
-    .storefront-mock { border: 1px solid #e5e2da; border-radius: 12px; padding: 1.25rem; background: #fff; max-width: 320px; }
-    .sf-img { height: 140px; background: #f1efe9; border-radius: 8px; margin-bottom: 0.75rem; }
-    .sf-name { font-weight: 600; margin: 0 0 0.25rem; }
-    .sf-price { margin: 0 0 0.75rem; color: #444; }
-    .sf-btn { display: inline-block; background: #1a1a1a; color: #fff; border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.9rem; }
-    .code-mock { background: #1a1a1a; color: #e8e6e1; border-radius: 12px; padding: 1.25rem; font-size: 0.85rem; }
-    .code-mock pre { margin: 0 0 0.75rem; overflow-x: auto; }
-    .code-mock code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-    .cm-missing { color: #e08080; font-weight: 700; }
-    .cm-note { margin: 0; color: #b9b6ae; font-size: 0.85rem; }
-    .fig-cap { color: #777; font-size: 0.85rem; margin-top: 1rem; }
-    .report-preview { display: grid; grid-template-columns: 280px 1fr; gap: 2rem; margin-top: 1.5rem; align-items: start; }
-    @media (max-width: 700px) { .report-preview { grid-template-columns: 1fr; } }
-    .rp-score { text-align: center; border: 1px solid #e5e2da; border-radius: 12px; padding: 1.5rem 1rem; background: #fff; }
-    .dial { width: 140px; height: 140px; }
-    .dial-num { font-size: 2rem; font-weight: 700; fill: #1a1a1a; }
-    .dial-grade { font-size: 1rem; fill: #777; }
-    .rp-site { font-weight: 600; margin: 0.75rem 0 0.25rem; }
-    .rp-meta { color: #777; font-size: 0.85rem; margin: 0; }
-    .rp-finding { border: 1px solid #e5e2da; border-radius: 12px; padding: 1.5rem; background: #fff; }
-    .rf-label { font-size: 0.8rem; color: #777; text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 0.5rem; }
-    .rf-cat { font-size: 0.9rem; color: #555; margin: 0 0 0.25rem; }
-    .rf-title { font-size: 1.15rem; font-weight: 700; margin: 0 0 0.75rem; }
-    .cta-row { margin-top: 1.5rem; }
-    </style>
-
 </head>
 <body>
 
@@ -156,7 +122,7 @@
     <a class="brand" href="#top"><span class="brand-mark">▦</span> Checklane</a>
     <nav class="nav-links">
       <a href="#how">How it works</a>
-      <a href="#report">What&rsquo;s inside</a>
+      <a href="#teaser">What&rsquo;s inside</a>
       <a href="#checks">What we check</a>
       <a href="#faq">FAQ</a>
     </nav>
@@ -173,7 +139,6 @@
       <h1>Will AI shoppers find your site?</h1>
       <p class="lede">Check whether AI shopping tools can access and understand
         your store. Get a free score.</p>
-      <p class="stakes">AI agents are about to shop for your customers. They will buy from the sites they can read best.</p>
 
       <form id="audit-form" class="audit-form" autocomplete="off">
         <input id="audit-domain" type="text" inputmode="url"
@@ -187,40 +152,6 @@
       <div id="audit-result" class="audit-result" hidden></div>
     </div>
   </section>
-
-    <section class="section" id="two-visitors">
-      <div class="wrap">
-        <h2>Two visitors. Two different websites.</h2>
-        <p class="lede">Your customer sees your design. An AI shopper sees your code. If the code does not describe your products, you are invisible to the next buyer.</p>
-        <div class="split">
-          <div class="split-panel">
-            <p class="split-label">Your customer sees</p>
-            <div class="storefront-mock">
-              <div class="sf-img"></div>
-              <p class="sf-name">Trail Running Shoes</p>
-              <p class="sf-price">$129.00</p>
-              <span class="sf-btn">Add to cart</span>
-            </div>
-          </div>
-          <div class="split-panel">
-            <p class="split-label">The AI sees</p>
-            <div class="code-mock"><pre><code>{
-  "@type": "Product",
-  "name": "Trail Running Shoes",
-  "offers": {
-    "@type": "Offer",
-    "price": <span class="cm-missing">missing</span>,
-    "availability": <span class="cm-missing">missing</span>
-  }
-}</code></pre>
-              <p class="cm-note">No price. No stock info. The AI moves on.</p>
-            </div>
-          </div>
-        </div>
-        <p class="fig-cap">Illustrated example. Your free audit checks whether your real pages have these labels.</p>
-      </div>
-    </section>
-
 
   <!-- ============ CRAWLER COVERAGE STRIP ============ -->
   <div class="logo-strip">
@@ -264,38 +195,33 @@
 
 
   <!-- ============ INSIDE THE FULL REPORT ============ -->
-  
-    <section class="section section-alt" id="report">
-      <div class="wrap">
-        <p class="kicker">The $9 report</p>
-        <h2>See your site the way AI shoppers see it</h2>
-        <p class="lede">Every check explained, every fix ranked by what matters most for your site. Yours to keep.</p>
-        <div class="report-preview">
-          <div class="rp-score">
-            <svg class="dial" viewBox="0 0 120 120" role="img" aria-label="Score 100 out of 100, grade A">
-              <circle cx="60" cy="60" r="52" fill="none" stroke="#e5e2da" stroke-width="12"/>
-              <circle cx="60" cy="60" r="52" fill="none" stroke="#1a1a1a" stroke-width="12"
-                stroke-dasharray="326.7" stroke-dashoffset="0" stroke-linecap="round"
-                transform="rotate(-90 60 60)"/>
-              <text x="60" y="58" text-anchor="middle" class="dial-num">100</text>
-              <text x="60" y="80" text-anchor="middle" class="dial-grade">A</text>
-            </svg>
-            <p class="rp-site">getchecklane.com</p>
-            <p class="rp-meta">Every check across five categories. Audited live.</p>
-          </div>
-          <div class="rp-finding">
-            <p class="rf-label">Real finding, from an earlier $9 report on getchecklane.com</p>
-            <p class="rf-cat">Category: The AI checkout handshake</p>
-            <p class="rf-title">No UCP checkout file found</p>
-            <p><strong>What it means:</strong> We checked the standard discovery paths (starting with the canonical /.well-known/ucp). Nothing there. This is the faster machine path for UCP-capable agents, not a prerequisite. Browser-driving agents buy through normal checkout today.</p>
-            <p><strong>How to fix it:</strong> Publish your UCP capability profile at /.well-known/ucp. The file itself is hours; a real UCP implementation (working REST endpoints, payment handlers with signing keys, order webhooks) is days to weeks of backend engineering. A static JSON pointing at dead endpoints is worse than none.</p>
+  <section class="section section-alt" id="teaser">
+    <div class="wrap">
+      <p class="kicker">Peek inside</p>
+      <h2>See your site the way AI shoppers see it</h2>
+      <p class="section-sub">AI agents are about to start shopping for your customers, and they will buy from the sites they can read best. The $9 report runs every check on your site and shows you exactly where you stand and what to fix, finding by finding, so you are ready before your competitors are.</p>
+      <div class="report-card">
+        <p style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#5b6b7c;margin:0 0 8px;">Real finding, from a $9 report on getchecklane.com</p>
+        <div style="background:#fff;border:1px solid #e2e9f0;border-radius:12px;padding:16px 18px;margin:0 0 20px;">
+          <p style="margin:0 0 4px;font-size:13px;color:#5b6b7c;">Category: <strong style="color:#16202b;">AI checkout handshake (UCP + ACP): 2/20</strong></p>
+          <p style="margin:0 0 10px;"><span style="display:inline-block;font-size:12px;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;border-radius:999px;padding:2px 10px;margin-right:8px;">Real gap</span><strong>No UCP checkout file found</strong></p>
+          <p style="margin:0 0 8px;"><strong>What it means:</strong> We checked the standard discovery paths (starting with the canonical /.well-known/ucp). Nothing there. Note: this is the faster machine path for UCP-capable agents, not a prerequisite. Browser-driving agents buy through normal checkout today.</p>
+          <p style="margin:0 0 4px;"><strong>How to fix it:</strong></p>
+          <div style="position:relative;">
+            <div style="filter:blur(5px);user-select:none;pointer-events:none;" aria-hidden="true">
+              <ol style="margin:4px 0 10px 20px;padding:0;">
+                <li style="margin-bottom:6px;">Publish your UCP capability profile at /.well-known/ucp (extensionless: the canonical discovery path in the UCP spec; /.well-known/ucp.json also works as a fallback). Be honest about the work: the file itself is hours, but a real UCP implementation (working REST endpoints, payment handlers with signing keys, order webhooks) is days to weeks of backend engineering. A static JSON pointing at dead endpoints is worse than none. Platform shortcuts: on Shopify, turn on Shopify&rsquo;s Agentic sales channel / AI tools. They publish the manifest for you (fast path). On a custom build, scope it as a backend project (days to weeks), not an afternoon task.</li>
+              </ol>
+            </div>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">
+              <a href="#audit" style="display:inline-block;background:#16202b;color:#fff;font-size:14px;font-weight:600;padding:10px 20px;border-radius:999px;text-decoration:none;">Get the full report: $9</a>
+              <span style="font-size:12px;color:#5b6b7c;">The fix steps come with the full report.</span>
+            </div>
           </div>
         </div>
-        <p class="cta-row"><a class="btn" href="#audit">Get the full report: $9</a></p>
-        <p class="fig-cap">The fix steps come with the full report. This is a roadmap, not a promise.</p>
       </div>
-    </section>
-
+    </div>
+  </section>
 
   <!-- ============ WHAT WE CHECK ============ -->
   <section class="section" id="checks">
@@ -423,7 +349,7 @@
 <footer class="footer">
   <div class="wrap">
     <p><span class="brand-mark">▦</span> Checklane helps small businesses get found by AI shoppers.</p>
-    <p class="micro footer-links"><a href="/guides">Guides</a> &middot; <a href="/services">Services</a> &middot; <a href="/contact">Contact us</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/refund">Refund policy</a></p>
+    <p class="micro footer-links"><a href="/guides">Guides</a> &middot; <a href="/services">Services</a> &middot; <a href="/contact">Contact us</a> &middot; <a href="mailto:support@getchecklane.com">support@getchecklane.com</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/refund">Refund policy</a></p>
     <p class="micro">Checklane grades what&rsquo;s technically verifiable about your site
       at audit time.</p>
     <p class="micro">All company names are trademarks of their respective owners,
@@ -432,29 +358,5 @@
 </footer>
 
 <script src="/static/app.js"></script>
-<script>
-(function(){
-  function reveal(sel, stagger){
-    var els = document.querySelectorAll(sel);
-    if(!els.length) return;
-    els.forEach(function(el, i){
-      el.classList.add('reveal');
-      if(stagger) el.style.transitionDelay = (i * stagger) + 'ms';
-    });
-    function show(el){ el.classList.add('in'); }
-    if(!('IntersectionObserver' in window)){ els.forEach(show); return; }
-    var io = new IntersectionObserver(function(entries){
-      entries.forEach(function(e){
-        if(e.isIntersecting){ show(e.target); io.unobserve(e.target); }
-      });
-    }, {threshold: 0.12});
-    els.forEach(function(el){ io.observe(el); });
-  }
-  reveal('#how .step', 90);
-  reveal('#checks .check', 80);
-  reveal('#report .report-preview', 0);
-  reveal('#faq .faq', 0);
-})();
-</script>
 </body>
 </html>
